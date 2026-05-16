@@ -86,39 +86,39 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISP-01 | Unmapped | Pending |
-| DISP-02 | Unmapped | Pending |
-| DISP-03 | Unmapped | Pending |
-| DISP-04 | Unmapped | Pending |
-| DISP-05 | Unmapped | Pending |
-| DISP-06 | Unmapped | Pending |
-| CLD-01 | Unmapped | Pending |
-| CLD-02 | Unmapped | Pending |
-| CLD-03 | Unmapped | Pending |
-| CLD-04 | Unmapped | Pending |
-| SRC-01 | Unmapped | Pending |
-| SRC-02 | Unmapped | Pending |
-| SRC-03 | Unmapped | Pending |
-| SRC-04 | Unmapped | Pending |
-| SRC-05 | Unmapped | Pending |
-| TUI-01 | Unmapped | Pending |
-| TUI-02 | Unmapped | Pending |
-| TUI-03 | Unmapped | Pending |
-| TUI-04 | Unmapped | Pending |
-| TUI-05 | Unmapped | Pending |
-| TUI-06 | Unmapped | Pending |
-| DOC-01 | Unmapped | Pending |
-| DOC-02 | Unmapped | Pending |
-| TEST-01 | Unmapped | Pending |
-| TEST-02 | Unmapped | Pending |
-| TEST-03 | Unmapped | Pending |
-| TEST-04 | Unmapped | Pending |
+| DISP-01 | Phase 4 | Pending |
+| DISP-02 | Phase 4 | Pending |
+| DISP-03 | Phase 4 | Pending |
+| DISP-04 | Phase 4 | Pending |
+| DISP-05 | Phase 4 | Pending |
+| DISP-06 | Phase 4 | Pending |
+| CLD-01 | Phase 2 | Pending |
+| CLD-02 | Phase 2 | Pending |
+| CLD-03 | Phase 2 | Pending |
+| CLD-04 | Phase 2 | Pending |
+| SRC-01 | Phase 2 | Pending |
+| SRC-02 | Phase 2 | Pending |
+| SRC-03 | Phase 2 | Pending |
+| SRC-04 | Phase 3 | Pending |
+| SRC-05 | Phase 3 | Pending |
+| TUI-01 | Phase 1 | Pending |
+| TUI-02 | Phase 3 | Pending |
+| TUI-03 | Phase 3 | Pending |
+| TUI-04 | Phase 1 | Pending |
+| TUI-05 | Phase 4 | Pending |
+| TUI-06 | Phase 4 | Pending |
+| DOC-01 | Phase 5 | Pending |
+| DOC-02 | Phase 5 | Pending |
+| TEST-01 | Phase 2 | Pending |
+| TEST-02 | Phase 2 | Pending |
+| TEST-03 | Phase 3 | Pending |
+| TEST-04 | Phase 4 | Pending |
 
 **Coverage:**
 
 - v1 requirements: 27 total
-- Mapped to phases: 0
-- Unmapped: 27
+- Mapped to phases: 27
+- Unmapped: 0
 
 ---
 

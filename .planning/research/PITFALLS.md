@@ -21,7 +21,7 @@ then blanks the TUI or crashes it.
 Local files feel safer than network APIs, so small tools often skip defensive
 schema handling. In this project, both sources are intentionally unofficial:
 Codex rollout JSONL is a session artifact, and Claude data is a cache written by
-a separate statusline script.
+an app-installed hook.
 
 **How to avoid:**
 Implement sources as tolerant parsers with narrow success criteria:
@@ -221,8 +221,8 @@ Use explicit scope guards in README and roadmap acceptance criteria:
 - No credential, Keychain, OAuth, or `DATABASE_URL` handling.
 - No history database, daemon, alert subsystem, one-shot mode, or per-model
   drill-down.
-- Claude statusline cache writing stays in the dotfiles repo and is reviewed
-  separately.
+- Claude cache writing stays inside the small app-owned hook installer and does
+  not depend on Rob's custom statusline.
 
 **Warning signs:**
 
@@ -260,8 +260,8 @@ Common mistakes when connecting to local data producers.
 |-------------|----------------|------------------|
 | Codex rollout JSONL | Picking newest file and assuming latest line contains quota data | Pick newest rollout, then scan for the last usable `event_msg`/`token_count` with non-null `rate_limits` |
 | Codex rollout JSONL | Treating `rate_limits: null` as fatal | Skip null entries and keep looking backward for the last usable event |
-| Claude statusline cache | Reading cache while the writer is mid-write | Statusline must write tmpfile then rename; reader treats malformed cache as a source error and keeps last-known-good data |
-| Claude statusline cache | Making TUI responsible for modifying the statusline script | Keep dotfiles change separate; TUI only documents expected cache shape |
+| Claude hook cache | Reading cache while the writer is mid-write | Hook must write tmpfile then rename; reader treats malformed cache as a source error and keeps last-known-good data |
+| Claude hook cache | Assuming Rob's custom statusline exists | Install an app-owned hook after prompting for permission; use the statusline script only as implementation inspiration |
 | tmux pane | Assuming resize means only width changed | Store both width and height; test narrow, normal, and extra-tall panes |
 
 ## Performance Traps
@@ -281,9 +281,9 @@ Domain-specific security issues beyond general CLI security.
 
 | Mistake | Risk | Prevention |
 |---------|------|------------|
-| Reading Claude credentials or Keychain from the TUI | Prompts, secret exposure, platform-specific failures | Do not implement network/OAuth fallback; read only the statusline-written cache |
+| Reading Claude credentials or Keychain from the TUI | Prompts, secret exposure, platform-specific failures | Do not implement network/OAuth fallback; read only the hook-written cache |
 | Logging raw rollout/cache data | Local session metadata leaks into terminal logs or test output | Log only concise source errors; fixtures must be synthetic |
-| Writing cache from this repo | Cross-repo ownership confusion and accidental statusline regressions | Dotfiles owns the statusline extension; this repo documents and reads the cache |
+| Modifying arbitrary statusline scripts | Cross-repo ownership confusion and accidental user regressions | Install or update only the `llm-quota`-owned Claude hook entry after user permission |
 
 ## UX Pitfalls
 

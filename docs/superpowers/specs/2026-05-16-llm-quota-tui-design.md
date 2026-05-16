@@ -57,13 +57,20 @@ implementation never makes a network call.
   this by skipping such lines; the interactive sessions the user actually runs do
   populate the field.
 
-### Claude Code — cache file written by the existing statusline
+### Claude Code — cache file written by an installed hook
 
-- The user's `~/.claude/statusline-command.sh` (symlinked from
-  `~/dotfiles/claude/.claude/statusline-command.sh`) already extracts
-  `rate_limits.five_hour.used_percentage` and `rate_limits.seven_day.used_percentage`
-  from the JSON Claude pipes on stdin (lines 134 and 142).
-- We extend that script to ALSO atomically write a small JSON file:
+- `llm-quota` is standalone. It must not depend on Rob's custom Claude
+  statusline script or assume other users have that script installed.
+- Rob's existing `~/.claude/statusline-command.sh` can be used as example code
+  because it already demonstrates how to read Claude's stdin JSON and extract
+  `rate_limits.five_hour.used_percentage` and
+  `rate_limits.seven_day.used_percentage`, but it is not part of the runtime
+  design.
+- `llm-quota` provides a setup flow, e.g. first launch or
+  `llm-quota install-claude-hook`, that prompts for permission to install a
+  small Claude hook/cache writer. Installing or first launching the TUI should
+  offer to install this hook so a new user can get fully set up in one flow.
+- The installed hook atomically writes a small JSON file:
   `~/.cache/llm-quota/claude.json`. Shape:
 
   ```json
@@ -74,10 +81,9 @@ implementation never makes a network call.
   }
   ```
 
-- The cache write happens **after** the statusline has already emitted its
-  output, so any I/O latency cannot affect display. Atomic write = tmpfile +
-  rename. The cache write is additive — the existing script behavior is
-  untouched.
+- The cache write must be atomic: tmpfile + rename. The hook should avoid
+  changing Claude's visible output or adding noticeable latency to Claude's
+  normal operation.
 - The TUI reads this cache directly. `stale_seconds = now - written_at`.
 
 ### Why no OAuth/network fallback for Claude
@@ -90,10 +96,10 @@ credentials in macOS Keychain, not in `~/.claude/.credentials.json` (verified
 introduces a platform-specific code path, and adds a runtime dep (`httpx`) for
 the network call itself.
 
-The "very small TUI" goal outweighs the value of the fallback: if the cache is
-missing or stale, the Claude rows render `—` with a footer hint
-(`Claude: open a Claude session to refresh`). Opening Claude triggers a
-statusline render within seconds and the cache is fresh again.
+The "very small TUI" goal outweighs the value of the fallback: if the hook is
+not installed or the cache is missing/stale, the Claude rows render `—` with a
+footer hint (`Claude: install hook, then open Claude to refresh`). Opening Claude
+after the hook is installed refreshes the cache.
 
 ### Why no network call for Codex
 
@@ -107,10 +113,11 @@ Four small pieces with one tiny shared data shape between them.
 
 ### Components
 
-1. **statusline extension** — ~6 added lines in `statusline-command.sh` that
-   pipe the rate-limit object to a tmpfile and atomically rename it to
-   `~/.cache/llm-quota/claude.json`. Lives in the dotfiles repo, committed
-   separately from the Go project.
+1. **Claude hook installer/cache writer** — a small install flow that prompts for
+   permission to install a Claude hook owned by `llm-quota`. The hook extracts
+   Claude rate-limit data from Claude's hook input, writes a tmpfile, and
+   atomically renames it to `~/.cache/llm-quota/claude.json`. Rob's statusline
+   script is inspiration only, not a dependency.
 
 2. **`internal/sources/codex.go`** — `Fetch() ([]Window, error)`. Pure function
    over the filesystem; no network. Returns a non-nil error on read failure so
@@ -187,8 +194,8 @@ Codex    7d  ███░░░░░░░░░░░░░░░░░░░�
 - Yellow: `60 <= used_pct < 85`
 - Red: `used_pct >= 85`
 
-Uses the same Catppuccin Mocha hex values already defined in the user's
-statusline script, copied into `internal/tui/colors.go` to avoid coupling.
+Uses Catppuccin Mocha hex values copied into `internal/tui/colors.go` so runtime
+styling does not depend on any external statusline or dotfiles script.
 
 ### Keys
 
@@ -250,6 +257,9 @@ for cache + rollouts, `time` for window math).
 cd ~/Personal/llm-quota
 go install ./cmd/llm-quota
 # → installs to $GOBIN (or $GOPATH/bin), already on PATH per ~/go layout
+llm-quota install
+# or first launch: llm-quota
+# → prompts for permission to install/update the Claude hook/cache writer
 ```
 
 ## Project Layout
@@ -264,6 +274,9 @@ go install ./cmd/llm-quota
 ├── cmd/llm-quota/
 │   └── main.go                              # entrypoint, tea.NewProgram(...).Run()
 ├── internal/
+│   ├── install/
+│   │   ├── claude_hook.go                   # prompted hook install/update
+│   │   └── claude_hook_test.go
 │   ├── sources/
 │   │   ├── window.go                        # Window struct
 │   │   ├── claude.go                        # cache reader
@@ -285,7 +298,8 @@ go install ./cmd/llm-quota
         └── claude_missing.txt
 ```
 
-Statusline extension lives separately in `~/dotfiles/claude/.claude/statusline-command.sh`.
+The Claude hook/cache writer is installed by `llm-quota`. Rob's custom statusline
+script can inform implementation, but users are not expected to have it.
 
 ## Testing
 
@@ -314,16 +328,18 @@ Tests pass `testdata/` paths so no test touches `~/.claude` or `~/.codex`.
 |-----------------------------------------------|-------------------------------------------------------------------------|
 | No Codex rollout files at all                 | Codex rows render `—`; footer: "Codex: no recent session"               |
 | Codex rollout exists but no usable event      | Same as above; footer notes "no token_count event found"                |
-| Cache file missing                            | Claude rows render `—`; footer: "Claude: open a Claude session to refresh" |
+| Claude hook not installed                     | Claude rows render `—`; footer: "Claude: install hook, then open Claude to refresh" |
+| Cache file missing                            | Claude rows render `—`; footer: "Claude: install hook, then open Claude to refresh" |
 | Cache file present but malformed              | Same as missing                                                         |
 | Source recovers mid-loop                      | Next 30s tick succeeds; rows return to normal automatically             |
 | Pane resized to very narrow                   | View shrinks bars; if `width < 30`, drops bars and shows percent only   |
 | Pane resized to very tall                     | Extra vertical space at bottom; no layout breakage                      |
 
-The cache file is the single biggest fragility. It's also low-stakes: as long
-as Claude is run at least once per ~hour, the cache stays current. If the user
-goes a day without running Claude, the rows just show `—` with a friendly
-hint. Document this in README.
+The hook/cache file is the single biggest fragility. It's also low-stakes: as
+long as the hook is installed and Claude is run at least once per ~hour, the
+cache stays current. If the hook is missing or the user goes a day without
+running Claude, the rows just show `—` with a friendly hint. Document this in
+README and make install/first launch prompt for hook permission.
 
 ## Non-Goals (explicitly out)
 
@@ -331,8 +347,8 @@ hint. Document this in README.
 - Historical graphing
 - Push notifications when thresholds are crossed
 - Per-model breakdowns
-- Integration into the existing statusline (the statusline already shows the
-  numbers; this is a separate stand-alone view)
+- Integration into an existing statusline. This is a standalone view; the Claude
+  hook only writes the cache consumed by the TUI.
 - A daemon. The tool is a foreground Bubble Tea program meant to run in a tmux
   pane; it is not backgrounded or auto-started.
 - A one-shot/non-watch mode. The tool always runs in its event loop.

@@ -24,7 +24,8 @@ Features users expect. Missing these means the pane does not solve the stated jo
 | Manual refresh key | Users expect a way to force reread after opening Claude/Codex or changing pane focus. | LOW | `r` only; do not add extra controls. |
 | Clean quit keys | Foreground TUIs must have obvious exits. | LOW | `q` and `Ctrl-C`; no confirmation prompt. |
 | Local Codex rollout reader | Codex quota data is available locally during interactive sessions. | MEDIUM | Read newest rollout JSONL and use the last usable token-count event with rate limits. |
-| Local Claude cache reader | Claude data comes from the existing statusline path without prompting for credentials. | MEDIUM | Read `~/.cache/llm-quota/claude.json`; statusline extension is separate work. |
+| Claude hook installation | The app must work for users without Rob's custom statusline. | MEDIUM | Installing or first launching the TUI should prompt for permission to install a small Claude hook/cache writer. |
+| Local Claude cache reader | Claude data comes from an app-owned hook without prompting for credentials. | MEDIUM | Read `~/.cache/llm-quota/claude.json`; the hook is installed by `llm-quota`. |
 | Missing-data placeholders | First run, malformed files, and absent sessions are expected conditions, not crashes. | MEDIUM | Render `—` rows plus short footer hints. |
 | Last-known-good retention | Temporary source failure should not blank a useful status pane. | MEDIUM | Keep prior values and annotate stale/error state. |
 | Stale-data warnings | Old quota data can mislead unless age is visible. | LOW | Footer warning after 1 hour; do not blank stale data. |
@@ -44,8 +45,8 @@ Features that could be valuable, but should not expand v1 unless they directly s
 | Normal-screen mode option | Preserves tmux scrollback better than alt-screen for some workflows. | LOW | Defer behind implementation spike; default to the design spec choice. |
 | Hand-rolled progress bars | More visual control than the Bubbles progress component. | MEDIUM | Defer unless Bubbles progress cannot match the desired compact layout. |
 | Terminal title update | Makes tmux/window lists more identifiable. | LOW | Optional v1.x polish; not needed for validation. |
-| README troubleshooting section | Reduces confusion about missing local data. | LOW | Add with v1 or immediately after; document how to refresh Claude/Codex data. |
-| Install convenience | Smooths repeated use from a tmux config or shell. | LOW | `go install` instructions are enough for v1; package managers are not. |
+| README troubleshooting section | Reduces confusion about missing local data. | LOW | Add with v1 or immediately after; document hook installation and how to refresh Claude/Codex data. |
+| Install convenience | Smooths repeated use from a tmux config or shell. | LOW | `go install` plus a first-launch/setup prompt for the Claude hook is enough for v1; package managers are not. |
 
 ### Anti-Features to Deliberately Avoid
 
@@ -61,11 +62,12 @@ Features that may sound useful but fight the tiny, local-only v1.
 | Alerts or desktop notifications | Threshold warnings seem convenient. | Adds background behavior, notification permissions, threshold config, and distraction. | Use visual red/yellow thresholds in the always-visible pane. |
 | Per-model breakdowns | Advanced users may want attribution. | Source data and UI focus are product-window level, not model analytics. | Track Claude/Codex subscription windows only. |
 | Daemon/background service | Could keep data warm without an open pane. | Contradicts the foreground tmux-pane model and adds lifecycle management. | Keep a single foreground Bubble Tea program. |
-| One-shot mode | Convenient for scripting or shell prompts. | Splits runtime behavior and encourages statusline overlap. | Always run the TUI loop; the existing statusline remains separate. |
+| One-shot mode | Convenient for scripting or shell prompts. | Splits runtime behavior and encourages statusline overlap. | Always run the TUI loop; hook setup remains a separate install action. |
 | Full settings UI | Users may expect theming, intervals, sources, or thresholds. | Consumes code and UI budget before the fixed personal workflow is validated. | Hardcode sensible defaults; document future knobs only when pain appears. |
 | Mouse support | Common in rich TUIs. | No value for a passive dashboard in a tmux pane. | Keyboard-only: `r`, `q`, `Ctrl-C`. |
 | Sorting/filtering/navigation | Common table-dashboard affordances. | There are exactly four fixed rows; navigation is noise. | Fixed row order matching product/window importance. |
-| Integrating into the existing statusline | Avoids a new terminal pane. | The project goal is a standalone pane; statusline already has different constraints. | Keep statusline change limited to writing Claude cache. |
+| Depending on a custom statusline | Reuses Rob's existing local script. | Other users may not have that script, so the app would not be standalone. | Install an app-owned Claude hook/cache writer after prompting for permission. |
+| Integrating into the existing statusline | Avoids a new terminal pane. | The project goal is a standalone pane; statusline already has different constraints. | Keep the TUI standalone and use a dedicated hook only to write the Claude cache. |
 
 ## Feature Dependencies
 
@@ -75,6 +77,10 @@ Local source readers
     ├──requires──> Percent-used readout
     ├──requires──> Reset countdowns
     └──requires──> Source parsing tests
+
+Claude hook installer
+    ├──requires──> Local Claude cache reader
+    └──enhances──> First-run missing-data recovery hints
 
 Automatic refresh loop
     ├──enhances──> Source readers
@@ -96,6 +102,7 @@ History/forecasting/alerts
 
 ### Dependency Notes
 
+- **Hook setup precedes Claude source confidence:** the dashboard cannot be standalone until it can install or guide installation of its own Claude cache producer.
 - **Source readers precede UI polish:** the dashboard cannot validate value until both Claude and Codex produce normalized local window data.
 - **Last-known-good retention depends on refresh semantics:** once refresh can fail repeatedly, model state must distinguish previous data from current errors.
 - **Responsive layout depends on fixed content:** v1 can stay simple because four rows fit without scrolling, tables, pagination, or navigation.
@@ -110,6 +117,7 @@ Minimum viable product needed to validate the concept.
 - [ ] Four fixed quota rows for Claude/Codex 5h and 7d windows.
 - [ ] Percent, colored bar, and reset countdown for each available window.
 - [ ] Local-only Codex rollout reader and Claude cache reader.
+- [ ] TUI install/setup or first launch prompts for permission to install the Claude hook/cache writer.
 - [ ] 30-second auto-refresh plus `r` manual refresh.
 - [ ] Clean exit on `q` and `Ctrl-C`.
 - [ ] Last-known-good data preservation after refresh failures.
@@ -146,6 +154,7 @@ Only revisit these if `llm-quota` becomes useful beyond Rob's single local setup
 | Progress bars | HIGH | MEDIUM | P1 |
 | Reset countdowns | HIGH | MEDIUM | P1 |
 | Local Codex reader | HIGH | MEDIUM | P1 |
+| Claude hook installer | HIGH | MEDIUM | P1 |
 | Local Claude cache reader | HIGH | MEDIUM | P1 |
 | Auto-refresh | HIGH | LOW | P1 |
 | Manual refresh | MEDIUM | LOW | P1 |

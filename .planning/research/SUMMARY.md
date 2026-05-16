@@ -70,6 +70,8 @@ processes, history, alerts, or broad configuration should be rejected for v1.
 **Must have (table stakes):**
 
 - Four fixed quota rows: Claude 5h, Claude 7d, Codex 5h, Codex 7d.
+- Prompted Claude hook installation during setup or first launch so the app works
+  without Rob's custom statusline.
 - Percent-used readout, colored progress bar, and reset countdown per row.
 - Local Codex rollout JSONL reader and local Claude cache reader.
 - 30-second automatic refresh plus `r` manual refresh.
@@ -112,16 +114,18 @@ only.
    program; contains no parsing, rendering, or policy logic.
 2. `internal/sources/window.go` — defines the shared normalized `Window` shape
    and source identifiers.
-3. `internal/sources/claude.go` — reads and validates the statusline-written
-   Claude cache file only.
-4. `internal/sources/codex.go` — finds the newest Codex rollout JSONL and
+3. `internal/install/claude_hook.go` — prompts for permission and installs the
+   app-owned Claude hook/cache writer.
+4. `internal/sources/claude.go` — reads and validates the hook-written Claude
+   cache file only.
+5. `internal/sources/codex.go` — finds the newest Codex rollout JSONL and
    extracts the last usable rate-limit event.
-5. `internal/tui/model.go` and `update.go` — hold durable UI state, typed
+6. `internal/tui/model.go` and `update.go` — hold durable UI state, typed
    messages, refresh commands, tick scheduling, key handling, resize handling,
    and last-known-good merge policy.
-6. `internal/tui/view.go` and `colors.go` — render rows, bars, countdowns,
+7. `internal/tui/view.go` and `colors.go` — render rows, bars, countdowns,
    placeholders, and footer hints using deterministic inputs.
-7. `testdata/` — synthetic source fixtures and golden render snapshots; never
+8. `testdata/` — synthetic source fixtures and golden render snapshots; never
    real home-directory data.
 
 ### Critical Pitfalls
@@ -163,18 +167,20 @@ window vocabulary.
 **Avoids:** mixed Charm major-version APIs and inconsistent source-specific
 labels leaking into the TUI.
 
-### Phase 2: Local Source Readers and Fixtures
+### Phase 2: Claude Hook Setup and Local Source Readers
 
 **Rationale:** The dashboard cannot be trusted until the unofficial local data
-sources are normalized defensively. This should come before view work so the UI
-does not encode source-specific assumptions.
+sources are normalized defensively. Claude also needs an app-owned hook installer
+so the product works for users who do not have Rob's custom statusline. This
+should come before view work so the UI does not encode source-specific
+assumptions.
 
-**Delivers:** Claude cache reader, Codex rollout reader, fixture suite for valid,
-missing, malformed, stale, null-rate-limit, no-usable-event, and swapped/missing
-window cases.
+**Delivers:** Prompted Claude hook installer/cache-writer template, Claude cache
+reader, Codex rollout reader, fixture suite for valid, missing, malformed, stale,
+null-rate-limit, no-usable-event, and swapped/missing window cases.
 
-**Addresses:** local Claude data, local Codex data, missing-data placeholders,
-source parsing tests.
+**Addresses:** standalone Claude setup, local Claude data, local Codex data,
+missing-data placeholders, source parsing tests.
 
 **Avoids:** treating local files as stable APIs, reading real home directories in
 tests, and silently swapping 5-hour/7-day windows.
@@ -216,13 +222,14 @@ weak render assertions that miss layout regressions.
 ### Phase 5: Main Wiring, Documentation, and Manual Tmux Validation
 
 **Rationale:** Real paths and user-facing guidance should be added after the
-tested core exists. The external Claude statusline writer belongs outside this
-repo, so this phase should document the cache contract and validate the local
-experience without taking ownership of dotfiles changes.
+tested core exists. The app-owned Claude hook installer belongs in this repo, so
+this phase should validate the install/setup experience alongside the local TUI
+experience.
 
 **Delivers:** `main.go` default paths, home-directory handling, startup error
-handling, README install/troubleshooting notes, manual tmux-pane validation, and
-a checklist for separately verifying the Claude statusline cache writer.
+handling, README install/troubleshooting notes, first-launch/setup prompt
+guidance, manual tmux-pane validation, and a checklist for verifying the Claude
+hook writes the documented cache shape.
 
 **Addresses:** install/use workflow, first-run missing data, source hints,
 30-second cadence feel, alt-screen behavior, and real-pane readability.
@@ -240,9 +247,8 @@ configuration before defaults are validated.
   are testable without ANSI/layout noise.
 - Build rendering with golden tests before real-path wiring so the narrow-pane
   product requirement is verified against synthetic, deterministic states.
-- Leave documentation, real defaults, and manual tmux validation until the core
-  is tested, while keeping the dotfiles statusline extension as a separate repo
-  concern.
+- Leave documentation, real defaults, hook setup validation, and manual tmux
+  validation until the core is tested.
 
 ### Research Flags
 
@@ -282,9 +288,9 @@ Phases with standard patterns (skip research-phase):
   source errors rather than broader integrations.
 - **Actual tmux ergonomics:** Alt-screen, 30-second refresh cadence, and footer
   density should be validated manually after the core TUI works.
-- **Claude statusline cache writer:** The Go repo depends on a cache file
-  produced by dotfiles. Keep the cache contract documented here, but implement
-  and review the writer separately.
+- **Claude hook cache writer:** The Go repo depends on a cache file produced by
+  an app-installed hook. Keep the cache contract documented here and make setup
+  prompt before installing or modifying Claude hook configuration.
 - **Bubbles progress snapshot behavior:** If progress rendering proves awkward to
   test or too wide for the pane, isolate it behind row rendering and replace only
   the bar implementation with a hand-rolled static bar.
@@ -312,7 +318,7 @@ Phases with standard patterns (skip research-phase):
 
 - GitHub READMEs/releases for Charm packages — ecosystem fit and current release
   confirmation.
-- Local observations of Claude statusline cache and Codex rollout JSONL shapes —
+- Local observations of Claude hook/cache shape and Codex rollout JSONL shapes —
   useful for fixtures but not durable contracts.
 
 ### Tertiary (LOW confidence)

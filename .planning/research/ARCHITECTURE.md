@@ -27,8 +27,8 @@ unavailable local source data without crashing or blanking useful values.
 ┌──────────────────────────────────────────────────────────────────────┐
 │ External local producers                                              │
 │                                                                      │
-│  Claude statusline script            Codex interactive sessions       │
-│  ~/dotfiles/.../statusline.sh        ~/.codex/sessions/**/rollout*.jsonl
+│  llm-quota Claude hook               Codex interactive sessions       │
+│  installed with permission           ~/.codex/sessions/**/rollout*.jsonl
 │           │                                      │                    │
 │           │ atomic write                         │ append JSONL        │
 │           ▼                                      ▼                    │
@@ -78,7 +78,8 @@ unavailable local source data without crashing or blanking useful values.
 |-----------|----------------|----------|
 | `cmd/llm-quota/main.go` | Wire defaults and run the Bubble Tea program. | No parsing, rendering, or policy logic. |
 | `internal/sources/window.go` | Define the small shared `Window` value and source identifiers. | No filesystem access. |
-| `internal/sources/claude.go` | Read and validate the Claude statusline cache. | Local cache file only; no Keychain or network fallback. |
+| `internal/sources/claude.go` | Read and validate the Claude hook-written cache. | Local cache file only; no Keychain or network fallback. |
+| `internal/install/claude_hook.go` | Prompted setup for the Claude hook/cache writer. | Does not depend on Rob's custom statusline script. |
 | `internal/sources/codex.go` | Locate the newest rollout JSONL and extract the last usable rate-limit event. | Local rollout files only; skip null events. |
 | `internal/tui/model.go` | Hold durable UI state and injectable dependencies. | No formatting-heavy view code. |
 | `internal/tui/update.go` | Own event handling, refresh commands, ticks, and last-known-good merge policy. | Does not parse source formats. |
@@ -93,6 +94,9 @@ cmd/llm-quota/
 └── main.go                 # defaults, tea.NewProgram, program run/error handling
 
 internal/
+├── install/
+│   ├── claude_hook.go      # prompted hook installation and cache-writer template
+│   └── claude_hook_test.go # install path/rendering/idempotency tests
 ├── sources/
 │   ├── window.go           # shared Window and Source types
 │   ├── claude.go           # cache reader
@@ -321,9 +325,9 @@ know that Codex calls its windows `primary` and `secondary`, or that Claude uses
    - Risk reduced: home-directory defaults and program startup behavior.
    - Keep this thin; most behavior should already be tested elsewhere.
 
-7. **Separately change the Claude statusline in dotfiles.**
-   - Risk reduced: repository-boundary confusion. This repo can ship and test
-     against fixtures before the external producer is updated.
+7. **Add prompted Claude hook installation.**
+   - Risk reduced: standalone setup. Users without Rob's statusline can install
+     the TUI and required Claude cache producer in one flow.
 
 8. **Manual tmux-pane validation.**
    - Risk reduced: alt-screen preference, 30-second cadence feel, and actual
@@ -350,29 +354,30 @@ know that Codex calls its windows `primary` and `secondary`, or that Claude uses
 - Strip ANSI before comparing golden render output unless the golden files are
   explicitly intended to lock color escape sequences.
 
-## External Dotfiles Statusline Relationship
+## Claude Hook Relationship
 
-The Claude statusline change is an upstream local data producer, not a component
-owned by this repository.
+The Claude hook/cache writer is an app-owned local data producer installed by
+`llm-quota` after the user grants permission. Rob's existing statusline script is
+reference material only; this app must not require it.
 
 This repo owns:
 
 - the expected cache-file contract;
 - fixtures representing that contract;
 - tolerant behavior when the cache is absent, malformed, stale, or old;
+- the prompted hook installation/update flow;
 - README documentation explaining how the cache gets refreshed.
 
-The dotfiles repo owns:
+The installer owns:
 
-- adding the cache write to `~/dotfiles/claude/.claude/statusline-command.sh`;
-- preserving existing statusline output and latency characteristics;
+- asking before modifying Claude hook configuration;
+- installing or updating only the `llm-quota`-owned hook entry;
 - atomic tmpfile-plus-rename behavior;
-- any shell-specific tests or manual validation for that script.
+- preserving any existing user Claude configuration and custom hooks.
 
-Roadmap implication: do not block Go source-reader and TUI work on the dotfiles
-change. Build this repo against fixtures first, then add a short integration
-phase or checklist item to verify that the real statusline writes the documented
-JSON shape. Commit/review the dotfiles change separately.
+Roadmap implication: do not couple Go source-reader and TUI work to Rob's custom
+statusline. Build the reader against fixtures first, then add a setup phase that
+installs the app-owned hook and verifies it writes the documented JSON shape.
 
 ## Anti-Patterns
 
@@ -433,7 +438,7 @@ that version consistently.
 
 | Input | Integration Pattern | Notes |
 |-------|---------------------|-------|
-| Claude cache | Read one JSON file from `~/.cache/llm-quota/claude.json`. | Produced by dotfiles statusline; tolerate absence and malformed content. |
+| Claude cache | Read one JSON file from `~/.cache/llm-quota/claude.json`. | Produced by an app-installed Claude hook; tolerate absence and malformed content. |
 | Codex rollout JSONL | Glob sessions tree, pick newest rollout by mtime, scan for last usable event. | Skip `rate_limits: null`; no network fallback. |
 | Terminal/tmux pane | Bubble Tea messages for keypresses and window size. | Store dimensions and render narrower layouts; no broad layout framework. |
 

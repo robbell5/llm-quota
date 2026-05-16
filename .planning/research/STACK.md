@@ -88,6 +88,8 @@ must update error state but keep previous successful data.
 Keep source readers independent of Bubble Tea:
 
 - `ClaudeSource.Fetch(now time.Time) ([]Window, error)` reads one cache JSON file.
+- First launch, `llm-quota install`, or `llm-quota install-claude-hook` prompts
+  for permission to install the Claude hook/cache writer that produces that file.
 - `CodexSource.Fetch(now time.Time) ([]Window, error)` scans local rollout files.
 - Constructors accept paths so tests never touch `~/.claude` or `~/.codex`.
 - Return source-specific errors; do not log, exit, or render from source code.
@@ -129,8 +131,8 @@ Responsive rules for v1:
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
 | Network or OAuth fallback for Claude/Codex | Explicitly out of scope for v1; adds credentials, prompts, platform-specific behavior, and failure modes that conflict with a tiny local dashboard. | Render local-data placeholders and footer hints. |
-| macOS Keychain reads from the Go TUI | Can prompt, is platform-specific, and couples this repo to Claude credential storage. | Read the statusline-written Claude cache file only. |
-| `cobra` / `viper` | This is a no-subcommand, no-config v1 TUI. A CLI framework adds structure without value. | Hard-code defaults in `main.go`; expose constructor paths for tests. |
+| macOS Keychain reads from the Go TUI | Can prompt, is platform-specific, and couples this repo to Claude credential storage. | Read the hook-written Claude cache file only. |
+| Broad CLI/config framework | v1 only needs the TUI plus a tiny setup command for Claude hook installation. | Hand-roll minimal argument handling unless setup grows beyond install/help. |
 | `fsnotify` | File watching is unnecessary for 30-second refresh and can be noisy across editor/atomic writes. | `tea.Tick` plus `r` refresh. |
 | Database or embedded store | There is no history or persistence requirement. | Last-known-good state in memory. |
 | `bubble-table`, `viewport`, list components | The UI is four fixed rows, not an interactive table or scrollable view. | Plain Lip Gloss rows plus Bubbles progress. |
@@ -142,6 +144,8 @@ Responsive rules for v1:
 **For v1 as specified:**
 
 - Use Bubble Tea v2 + Bubbles progress + Lip Gloss + stdlib readers.
+- Include a first-launch/setup prompt that asks before installing the Claude
+  hook/cache writer.
 - Use local files only and no config surface beyond source path constructors.
 - Because the product is a dedicated tmux-pane monitor with four fixed rows.
 

@@ -32,7 +32,16 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. User can exit cleanly with `q` without leaving terminal output in a broken state.
   3. User can exit cleanly with `Ctrl-C` without a panic or hung process.
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 01-01-PLAN.md — Pin the Go module, command entrypoint, and Bubble Tea quit/update spine.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 01-02-PLAN.md — Render the Phase 1 startup screen and verify launch/quit behavior.
+
 **UI hint**: yes
 
 ### Phase 2: Standalone Local Data Sources

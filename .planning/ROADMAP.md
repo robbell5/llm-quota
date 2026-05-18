@@ -66,7 +66,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 source contract completion)*
 
-- [ ] 02-02-PLAN.md — Implement the local Codex rollout JSONL reader.
+- [x] 02-02-PLAN.md — Implement the local Codex rollout JSONL reader.
 
 **Wave 3** *(blocked on source readers and installer completion)*
 
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
-| 2. Standalone Local Data Sources | 2/4 | In Progress|  |
+| 2. Standalone Local Data Sources | 3/4 | In Progress|  |
 | 3. Refresh and Resilience Loop | 0/TBD | Not started | - |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

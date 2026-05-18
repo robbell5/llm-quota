@@ -25,8 +25,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Local Sources
 
-- [ ] **SRC-01**: User can get Codex quota data from the most recent local Codex rollout JSONL file.
-- [ ] **SRC-02**: User sees Codex placeholder rows and a concise hint when no usable Codex quota event exists.
+- [x] **SRC-01**: User can get Codex quota data from the most recent local Codex rollout JSONL file.
+- [x] **SRC-02**: User sees Codex placeholder rows and a concise hint when no usable Codex quota event exists.
 - [x] **SRC-03**: User sees Claude placeholder rows and a concise hook/setup hint when the Claude cache is missing, malformed, or unavailable.
 - [ ] **SRC-04**: User continues seeing last-known-good rows when a later refresh fails for one source.
 - [ ] **SRC-05**: User sees stale-data warnings when displayed quota data is older than the accepted freshness threshold.
@@ -45,7 +45,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DOC-01**: User can install the binary and complete Claude hook setup from documented instructions.
 - [ ] **DOC-02**: User can troubleshoot missing Claude or Codex data from documented placeholder hints.
 - [x] **TEST-01**: Maintainer can verify Claude cache parsing for valid, missing, malformed, and stale cache files without touching real home-directory data.
-- [ ] **TEST-02**: Maintainer can verify Codex rollout parsing for newest-file selection, null rate limits, malformed events, and missing usable events.
+- [x] **TEST-02**: Maintainer can verify Codex rollout parsing for newest-file selection, null rate limits, malformed events, and missing usable events.
 - [ ] **TEST-03**: Maintainer can verify refresh merge behavior preserves last-known-good data after source failures.
 - [ ] **TEST-04**: Maintainer can verify rendered output for normal, mixed-threshold, missing-source, stale-source, and narrow-width states.
 
@@ -96,8 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | CLD-02 | Phase 2 | Complete |
 | CLD-03 | Phase 2 | Complete |
 | CLD-04 | Phase 2 | Complete |
-| SRC-01 | Phase 2 | Pending |
-| SRC-02 | Phase 2 | Pending |
+| SRC-01 | Phase 2 | Complete |
+| SRC-02 | Phase 2 | Complete |
 | SRC-03 | Phase 2 | Complete |
 | SRC-04 | Phase 3 | Pending |
 | SRC-05 | Phase 3 | Pending |
@@ -110,7 +110,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOC-01 | Phase 5 | Pending |
 | DOC-02 | Phase 5 | Pending |
 | TEST-01 | Phase 2 | Complete |
-| TEST-02 | Phase 2 | Pending |
+| TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Pending |
 | TEST-04 | Phase 4 | Pending |
 

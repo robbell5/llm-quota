@@ -57,7 +57,20 @@ Plans:
   4. User can see Claude quota data after the hook writes `~/.cache/llm-quota/claude.json` and Codex quota data from the newest local rollout JSONL.
   5. Maintainer can verify Claude and Codex parser behavior with synthetic fixtures for valid, missing, malformed, stale, null, and no-usable-event cases.
 
-**Plans**: TBD
+**Plans**: 4 plans
+Plans:
+**Wave 1**
+
+- [ ] 02-01-PLAN.md — Create normalized source contracts and the Claude cache reader.
+- [ ] 02-03-PLAN.md — Create the safe, idempotent Claude hook installer package.
+
+**Wave 2** *(blocked on Wave 1 source contract completion)*
+
+- [ ] 02-02-PLAN.md — Implement the local Codex rollout JSONL reader.
+
+**Wave 3** *(blocked on source readers and installer completion)*
+
+- [ ] 02-04-PLAN.md — Wire setup behavior into the command edge and preserve placeholder hints.
 **UI hint**: yes
 
 ### Phase 3: Refresh and Resilience Loop

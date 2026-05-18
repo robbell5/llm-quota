@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -172,6 +173,9 @@ func assertWindows(t *testing.T, got, want []Window) {
 		}
 		if got[i].StaleAge != want[i].StaleAge {
 			t.Fatalf("window %d stale age = %s, want %s", i, got[i].StaleAge, want[i].StaleAge)
+		}
+		if !reflect.DeepEqual(got[i].Metadata, want[i].Metadata) {
+			t.Fatalf("window %d metadata = %#v, want %#v", i, got[i].Metadata, want[i].Metadata)
 		}
 	}
 }

@@ -202,12 +202,104 @@ func managedHook(cachePath string) map[string]any {
 		"name":             managedHookName,
 		"llm_quota_marker": managedHookMarker,
 		"matcher":          "*",
-		"command":          managedHookCommand(cachePath),
+		"hooks": []any{
+			map[string]any{
+				"type":    "command",
+				"command": managedHookCommand(cachePath),
+			},
+		},
 	}
 }
 
 func managedHookCommand(cachePath string) string {
-	return "mkdir -p " + shellQuote(filepath.Dir(cachePath)) + " && cat > " + shellQuote(cachePath)
+	return "llm-quota claude-hook-cache-writer --cache " + shellQuote(cachePath)
+}
+
+func RunClaudeHookCacheWriter(input io.Reader, cachePath string, now time.Time) error {
+	if cachePath == "" {
+		return errors.New("cache path is required")
+	}
+
+	var payload claudeHookPayload
+	decoder := json.NewDecoder(input)
+	if err := decoder.Decode(&payload); err != nil {
+		return fmt.Errorf("decode Claude hook input: %w", err)
+	}
+	var extra any
+	if err := decoder.Decode(&extra); err != io.EOF {
+		if err == nil {
+			return errors.New("decode Claude hook input: trailing JSON value")
+		}
+		return fmt.Errorf("decode Claude hook input: %w", err)
+	}
+
+	rateLimits := payload.RateLimits
+	if rateLimits == nil && payload.Payload != nil {
+		rateLimits = payload.Payload.RateLimits
+	}
+	if rateLimits == nil {
+		return errors.New("missing rate_limits")
+	}
+	if err := rateLimits.validate(); err != nil {
+		return err
+	}
+
+	writtenAt := now.Unix()
+	cache := claudeHookCache{
+		FiveHour:  rateLimits.FiveHour,
+		SevenDay:  rateLimits.SevenDay,
+		WrittenAt: &writtenAt,
+	}
+	return writeJSONAtomic(cachePath, cache)
+}
+
+type claudeHookPayload struct {
+	RateLimits *claudeHookRateLimits `json:"rate_limits"`
+	Payload    *struct {
+		RateLimits *claudeHookRateLimits `json:"rate_limits"`
+	} `json:"payload"`
+}
+
+type claudeHookCache struct {
+	FiveHour  *claudeHookWindow `json:"five_hour"`
+	SevenDay  *claudeHookWindow `json:"seven_day"`
+	WrittenAt *int64            `json:"written_at"`
+}
+
+type claudeHookRateLimits struct {
+	FiveHour *claudeHookWindow `json:"five_hour"`
+	SevenDay *claudeHookWindow `json:"seven_day"`
+}
+
+func (r claudeHookRateLimits) validate() error {
+	if r.FiveHour == nil {
+		return errors.New("missing five_hour rate limit")
+	}
+	if err := r.FiveHour.validate("five_hour"); err != nil {
+		return err
+	}
+	if r.SevenDay == nil {
+		return errors.New("missing seven_day rate limit")
+	}
+	if err := r.SevenDay.validate("seven_day"); err != nil {
+		return err
+	}
+	return nil
+}
+
+type claudeHookWindow struct {
+	UsedPercentage *float64 `json:"used_percentage"`
+	ResetsAt       *int64   `json:"resets_at"`
+}
+
+func (w claudeHookWindow) validate(name string) error {
+	if w.UsedPercentage == nil {
+		return fmt.Errorf("missing %s used_percentage", name)
+	}
+	if w.ResetsAt == nil {
+		return fmt.Errorf("missing %s resets_at", name)
+	}
+	return nil
 }
 
 func shellQuote(value string) string {

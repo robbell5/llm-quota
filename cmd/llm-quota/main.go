@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/rob/llm-quota/internal/install"
@@ -39,6 +40,8 @@ func run(args []string, streams appStreams, deps appDeps) int {
 
 	if len(args) > 0 {
 		switch args[0] {
+		case "claude-hook-cache-writer":
+			return runClaudeHookCacheWriter(args[1:], streams)
 		case "install-claude-hook":
 			if len(args) > 1 {
 				fmt.Fprintf(streams.Stderr, "llm-quota: unknown argument: %s\n", args[1])
@@ -76,6 +79,18 @@ func runInstallClaudeHook(streams appStreams, deps appDeps) int {
 	fmt.Fprintln(streams.Stdout, result.Message)
 	if result.BackupPath != "" {
 		fmt.Fprintf(streams.Stdout, "backup: %s\n", result.BackupPath)
+	}
+	return 0
+}
+
+func runClaudeHookCacheWriter(args []string, streams appStreams) int {
+	if len(args) != 2 || args[0] != "--cache" || args[1] == "" {
+		fmt.Fprintln(streams.Stderr, "llm-quota: usage: claude-hook-cache-writer --cache <path>")
+		return 2
+	}
+	if err := install.RunClaudeHookCacheWriter(streams.Stdin, args[1], time.Now()); err != nil {
+		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
+		return 1
 	}
 	return 0
 }
@@ -216,11 +231,33 @@ func claudeHookInstalled(paths install.ClaudeHookPaths) (bool, error) {
 		if !ok {
 			continue
 		}
-		if hook["name"] == "llm-quota" || hook["llm_quota_marker"] == "llm-quota" {
+		if isCurrentManagedClaudeHook(hook, paths.CachePath) {
 			return true, nil
 		}
 	}
 	return false, nil
+}
+
+func isCurrentManagedClaudeHook(hook map[string]any, cachePath string) bool {
+	if hook["name"] != "llm-quota" && hook["llm_quota_marker"] != "llm-quota" {
+		return false
+	}
+	if hook["matcher"] != "*" {
+		return false
+	}
+	nested, ok := hook["hooks"].([]any)
+	if !ok || len(nested) != 1 {
+		return false
+	}
+	commandHook, ok := nested[0].(map[string]any)
+	if !ok || commandHook["type"] != "command" {
+		return false
+	}
+	command, ok := commandHook["command"].(string)
+	if !ok {
+		return false
+	}
+	return strings.Contains(command, "claude-hook-cache-writer --cache") && strings.Contains(command, cachePath)
 }
 
 func startTUI() error {

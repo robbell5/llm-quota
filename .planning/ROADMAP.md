@@ -57,7 +57,7 @@ Plans:
   4. User can see Claude quota data after the hook writes `~/.cache/llm-quota/claude.json` and Codex quota data from the newest local rollout JSONL.
   5. Maintainer can verify Claude and Codex parser behavior with synthetic fixtures for valid, missing, malformed, stale, null, and no-usable-event cases.
 
-**Plans**: 4 plans
+**Plans**: 5 plans
 Plans:
 **Wave 1**
 
@@ -71,6 +71,10 @@ Plans:
 **Wave 3** *(blocked on source readers and installer completion)*
 
 - [x] 02-04-PLAN.md — Wire setup behavior into the command edge and preserve placeholder hints.
+
+**Wave 4** *(gap closure; blocked on installer and command setup completion)*
+
+- [ ] 02-05-PLAN.md — Close Claude hook shape and cache-writer verification gaps.
 **UI hint**: yes
 
 ### Phase 3: Refresh and Resilience Loop
@@ -128,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
-| 2. Standalone Local Data Sources | 4/4 | Complete   | 2026-05-18 |
+| 2. Standalone Local Data Sources | 4/5 | Gaps found | - |
 | 3. Refresh and Resilience Loop | 0/TBD | Not started | - |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

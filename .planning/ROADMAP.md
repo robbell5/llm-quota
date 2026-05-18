@@ -61,7 +61,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 02-01-PLAN.md — Create normalized source contracts and the Claude cache reader.
+- [x] 02-01-PLAN.md — Create normalized source contracts and the Claude cache reader.
 - [ ] 02-03-PLAN.md — Create the safe, idempotent Claude hook installer package.
 
 **Wave 2** *(blocked on Wave 1 source contract completion)*
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
-| 2. Standalone Local Data Sources | 0/TBD | Not started | - |
+| 2. Standalone Local Data Sources | 1/4 | In Progress | - |
 | 3. Refresh and Resilience Loop | 0/TBD | Not started | - |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

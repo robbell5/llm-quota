@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: executing
-stopped_at: Completed 02-02-PLAN.md
-last_updated: "2026-05-18T13:41:23.106Z"
+status: verifying
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-05-18T13:50:49.320Z"
 last_activity: 2026-05-18
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 6
-  completed_plans: 5
-  percent: 20
+  completed_plans: 6
+  percent: 40
 ---
 
 # Project State
@@ -27,10 +27,10 @@ See: .planning/PROJECT.md (updated 2026-05-16)
 
 Phase: 02 (standalone-local-data-sources) — EXECUTING
 Plan: 4 of 4
-Status: Ready to execute
+Status: Phase complete — ready for verification
 Last activity: 2026-05-18
 
-Progress: [████████░░] 83%
+Progress: [██████████] 100%
 
 ## Performance Metrics
 
@@ -59,6 +59,7 @@ Progress: [████████░░] 83%
 | Phase 02-standalone-local-data-sources P01 | 2 min | 2 tasks | 3 files |
 | Phase 02-standalone-local-data-sources P03 | 3 min | 2 tasks | 2 files |
 | Phase 02-standalone-local-data-sources P02 | 3 min | 2 tasks | 3 files |
+| Phase 02-standalone-local-data-sources P04 | 4 min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -80,6 +81,9 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 02 Plan 02]: Codex rollout discovery scans all rollout JSONL files under the injected sessions root and orders them by modification time. — Matches D-14/D-15 without depending on private filename timestamp conventions.
 - [Phase 02 Plan 02]: Codex parsing skips malformed, unrelated, null, and structurally incomplete events. — Keeps noisy private local session artifacts from crashing the source reader or leaking raw payloads in errors.
 - [Phase 02 Plan 02]: Codex plan_type is preserved as optional Window metadata. — Lets later footer rendering use source context without coupling the TUI to Codex JSON internals.
+- [Phase 02-04]: Command dispatch remains intentionally narrow: only no-arg TUI launch and install-claude-hook are supported in Phase 2. — Matches D-01 and avoids out-of-scope setup/help aliases.
+- [Phase 02-04]: First-launch setup consent is handled before Bubble Tea startup and uses injected dependencies in tests to avoid real Claude config mutation. — Preserves the plain terminal permission prompt and keeps tests synthetic/local-only.
+- [Phase 02-04]: The wide footer uses the exact install-claude-hook command hint while width 50 and narrower keep the compact footer. — Keeps setup copy actionable without reintroducing wrapping at the target small-pane widths.
 
 ### Pending Todos
 
@@ -100,6 +104,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-18T13:41:14.661Z
-Stopped at: Completed 02-02-PLAN.md
+Last session: 2026-05-18T13:50:00.741Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None

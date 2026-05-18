@@ -14,7 +14,7 @@ The v1 roadmap delivers a small, standalone, local-file-backed Go/Bubble Tea TUI
 Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foreground TUI Foundation** - Create the compiling Go/Bubble Tea app spine with clean foreground runtime and quit behavior.
-- [ ] **Phase 2: Standalone Local Data Sources** - Add the app-owned Claude hook/cache setup and defensive Claude/Codex source readers.
+- [x] **Phase 2: Standalone Local Data Sources** - Add the app-owned Claude hook/cache setup and defensive Claude/Codex source readers. (completed 2026-05-18)
 - [ ] **Phase 3: Refresh and Resilience Loop** - Make the running TUI refresh automatically and manually while preserving last-known-good data.
 - [ ] **Phase 4: Quota Display and Responsive Rendering** - Render all quota windows with thresholds, placeholders, footer hints, and narrow-pane layouts.
 - [ ] **Phase 5: Install, Docs, and Real-Pane Validation** - Wire real defaults and document setup/troubleshooting for a usable tmux-pane release.
@@ -70,7 +70,7 @@ Plans:
 
 **Wave 3** *(blocked on source readers and installer completion)*
 
-- [ ] 02-04-PLAN.md — Wire setup behavior into the command edge and preserve placeholder hints.
+- [x] 02-04-PLAN.md — Wire setup behavior into the command edge and preserve placeholder hints.
 **UI hint**: yes
 
 ### Phase 3: Refresh and Resilience Loop
@@ -128,7 +128,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
-| 2. Standalone Local Data Sources | 3/4 | In Progress|  |
+| 2. Standalone Local Data Sources | 4/4 | Complete   | 2026-05-18 |
 | 3. Refresh and Resilience Loop | 0/TBD | Not started | - |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

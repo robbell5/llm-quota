@@ -31,7 +31,7 @@ func TestRenderStartupScreen(t *testing.T) {
 		t.Fatalf("expected missing local data hint in rows, got:\n%s", full)
 	}
 
-	const fullFooter = "q / Ctrl-C quit · Claude: install hook · Codex: open Codex"
+	const fullFooter = "q / Ctrl-C quit · Claude: run install-claude-hook · Codex: open Codex"
 	if !strings.Contains(full, fullFooter) {
 		t.Fatalf("expected full footer %q in:\n%s", fullFooter, full)
 	}
@@ -51,7 +51,7 @@ func TestRenderStartupScreen(t *testing.T) {
 		t.Fatalf("expected compact footer at width 50 in:\n%s", atFifty)
 	}
 
-	if strings.Contains(compact, "Claude: install hook") || strings.Contains(compact, "Codex: open Codex") {
+	if strings.Contains(compact, "Claude: run install-claude-hook") || strings.Contains(compact, "Codex: open Codex") {
 		t.Fatalf("compact footer should avoid source hints that wrap:\n%s", compact)
 	}
 

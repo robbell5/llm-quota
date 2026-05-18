@@ -65,7 +65,7 @@ Each task was committed atomically:
 1. **Task 1: Write Claude hook installer safety tests** - `4dd7c39` (test)
 2. **Task 2: Implement safe hook install/update policy** - `9567df7` (feat)
 
-**Plan metadata:** pending final metadata commit
+**Plan metadata:** `0c1eaf7` (docs)
 
 _Note: This plan used the required RED → GREEN flow: the test commit failed before implementation, then the feature commit made the tests pass._
 

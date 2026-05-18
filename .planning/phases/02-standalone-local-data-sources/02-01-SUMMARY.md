@@ -74,7 +74,7 @@ Each task was committed atomically:
 1. **Task 1: Define source contracts and Claude parser expectations** - `be4b837` (test)
 2. **Task 2: Implement Claude cache reader** - `35841a5` (feat)
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** `3954f29` (docs)
 
 ## Files Created/Modified
 

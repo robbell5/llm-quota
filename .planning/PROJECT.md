@@ -14,7 +14,9 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 
 ### Validated
 
-(None yet -- ship to validate)
+- Phase 02 validated that Codex quota data can be read from local rollout JSONL files using synthetic fixtures.
+- Phase 02 validated that first launch can prompt for app-owned Claude hook installation without mutating unrelated Claude settings.
+- Phase 02 validated that the installed Claude hook command can write `ClaudeReader`-compatible cache JSON atomically.
 
 ### Active
 
@@ -70,9 +72,9 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 |----------|-----------|---------|
 | Use Go and Bubble Tea | Rob wants to learn Bubble Tea, and the app is naturally event-loop driven. | -- Pending |
 | Use local data sources only | Keeps the tool small and avoids credential prompts, OAuth fallback paths, and network dependencies. | -- Pending |
-| Install an app-owned Claude hook/cache writer | The TUI must work for users without Rob's custom statusline while still avoiding OAuth, Keychain reads, and network calls. | -- Pending |
-| Prompt for Claude hook installation during setup or first launch | A new user should be able to install the viewer and required Claude cache producer in one flow. | -- Pending |
-| Read Codex data from the newest rollout JSONL | Codex writes quota data locally during interactive sessions. | -- Pending |
+| Install an app-owned Claude hook/cache writer | The TUI must work for users without Rob's custom statusline while still avoiding OAuth, Keychain reads, and network calls. | Validated in Phase 02 |
+| Prompt for Claude hook installation during setup or first launch | A new user should be able to install the viewer and required Claude cache producer in one flow. | Validated in Phase 02 |
+| Read Codex data from the newest rollout JSONL | Codex writes quota data locally during interactive sessions. | Validated in Phase 02 |
 | Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | -- Pending |
 | Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane, with a known spike to revisit if scrollback matters. | -- Pending |
 
@@ -97,4 +99,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-16 after initialization*
+*Last updated: 2026-05-18 after Phase 02 completion*

@@ -123,6 +123,70 @@ func TestInstallClaudeHookUpdatesOnlyExplicitlyManagedLLMQuotaEntry(t *testing.T
 	assertManagedCommandHookShape(t, managed, cachePath)
 }
 
+func TestInstallClaudeHookPreservesMarkerlessLLMQuotaNamedHook(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	cachePath := filepath.Join(tempDir, "quota cache", "claude cache.json")
+
+	markerlessHook := map[string]any{
+		"name":    "llm-quota",
+		"matcher": "*",
+		"hooks": []any{
+			map[string]any{
+				"type":    "command",
+				"command": "echo user-owned",
+			},
+		},
+	}
+	writeJSON(t, configPath, map[string]any{
+		"hooks": map[string]any{
+			"PostToolUse": []any{markerlessHook},
+		},
+	})
+
+	result, err := InstallClaudeHook(ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		StatePath:        filepath.Join(tempDir, "state.json"),
+		CachePath:        cachePath,
+	})
+	if err != nil {
+		t.Fatalf("InstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected changed result when appending managed llm-quota hook")
+	}
+
+	postToolUse := hookEntries(t, readJSONMap(t, configPath), "PostToolUse")
+	if len(postToolUse) != 2 {
+		t.Fatalf("expected markerless hook plus managed hook, got %#v", postToolUse)
+	}
+	assertContainsHook(t, postToolUse, markerlessHook)
+	managed := findManagedHook(t, postToolUse)
+	assertManagedCommandHookShape(t, managed, cachePath)
+}
+
+func TestInstallClaudeHookUsesConfiguredExecutablePath(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	cachePath := filepath.Join(tempDir, "quota cache", "claude cache.json")
+	executablePath := filepath.Join(tempDir, "bin dir", "llm-quota")
+
+	if _, err := InstallClaudeHook(ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		StatePath:        filepath.Join(tempDir, "state.json"),
+		CachePath:        cachePath,
+		ExecutablePath:   executablePath,
+	}); err != nil {
+		t.Fatalf("InstallClaudeHook returned error: %v", err)
+	}
+
+	managed := findManagedHook(t, hookEntries(t, readJSONMap(t, configPath), "PostToolUse"))
+	command := managedCommand(t, managed)
+	if !strings.HasPrefix(command, shellQuote(executablePath)+" ") {
+		t.Fatalf("nested hook command = %q, want executable path prefix %q", command, shellQuote(executablePath))
+	}
+}
+
 func TestRunClaudeHookCacheWriterWritesReaderCompatibleCache(t *testing.T) {
 	cachePath := filepath.Join(t.TempDir(), "quota cache", "claude cache.json")
 	writtenAt := int64(1778930000)
@@ -334,16 +398,31 @@ func assertManagedCommandHookShape(t *testing.T, managed map[string]any, cachePa
 	if commandHook["type"] != "command" {
 		t.Fatalf("nested hook type = %#v, want command", commandHook["type"])
 	}
-	command, ok := commandHook["command"].(string)
-	if !ok || command == "" {
-		t.Fatalf("nested hook command = %#v, want command pointing at cache path %q", commandHook["command"], cachePath)
-	}
+	command := managedCommand(t, managed)
 	if !strings.Contains(command, "claude-hook-cache-writer --cache") {
 		t.Fatalf("nested hook command = %q, want claude-hook-cache-writer --cache", command)
 	}
 	if !strings.Contains(command, shellQuote(cachePath)) {
 		t.Fatalf("nested hook command = %q, want shell-quoted cache path %q", command, shellQuote(cachePath))
 	}
+}
+
+func managedCommand(t *testing.T, managed map[string]any) string {
+	t.Helper()
+
+	hooks, ok := managed["hooks"].([]any)
+	if !ok || len(hooks) != 1 {
+		t.Fatalf("managed hook nested hooks missing or wrong length: %#v", managed["hooks"])
+	}
+	commandHook, ok := hooks[0].(map[string]any)
+	if !ok {
+		t.Fatalf("managed hook nested command hook wrong type: %#v", hooks[0])
+	}
+	command, ok := commandHook["command"].(string)
+	if !ok || command == "" {
+		t.Fatalf("nested hook command = %#v, want non-empty command", commandHook["command"])
+	}
+	return command
 }
 
 func sortedKeys(value map[string]any) []string {

@@ -23,6 +23,7 @@ type ClaudeHookPaths struct {
 	ClaudeConfigPath string
 	StatePath        string
 	CachePath        string
+	ExecutablePath   string
 }
 
 type InstallResult struct {
@@ -45,7 +46,7 @@ func InstallClaudeHook(paths ClaudeHookPaths) (InstallResult, error) {
 	}
 	original := cloneJSONMap(config)
 
-	if err := installManagedHook(config, paths.CachePath); err != nil {
+	if err := installManagedHook(config, paths.ExecutablePath, paths.CachePath); err != nil {
 		return InstallResult{}, err
 	}
 	if reflect.DeepEqual(original, config) {
@@ -137,7 +138,7 @@ func readClaudeConfig(path string) (map[string]any, bool, error) {
 	return config, true, nil
 }
 
-func installManagedHook(config map[string]any, cachePath string) error {
+func installManagedHook(config map[string]any, executablePath string, cachePath string) error {
 	hooks, err := hooksObject(config)
 	if err != nil {
 		return err
@@ -147,7 +148,7 @@ func installManagedHook(config map[string]any, cachePath string) error {
 	if err != nil {
 		return err
 	}
-	managed := managedHook(cachePath)
+	managed := managedHook(executablePath, cachePath)
 
 	for index, entry := range entries {
 		hook, ok := entry.(map[string]any)
@@ -194,10 +195,10 @@ func getHookEntries(hooks map[string]any, event string) ([]any, error) {
 }
 
 func isManagedHook(hook map[string]any) bool {
-	return hook["name"] == managedHookName || hook["llm_quota_marker"] == managedHookMarker
+	return hook["llm_quota_marker"] == managedHookMarker
 }
 
-func managedHook(cachePath string) map[string]any {
+func managedHook(executablePath string, cachePath string) map[string]any {
 	return map[string]any{
 		"name":             managedHookName,
 		"llm_quota_marker": managedHookMarker,
@@ -205,14 +206,17 @@ func managedHook(cachePath string) map[string]any {
 		"hooks": []any{
 			map[string]any{
 				"type":    "command",
-				"command": managedHookCommand(cachePath),
+				"command": ManagedHookCommand(executablePath, cachePath),
 			},
 		},
 	}
 }
 
-func managedHookCommand(cachePath string) string {
-	return "llm-quota claude-hook-cache-writer --cache " + shellQuote(cachePath)
+func ManagedHookCommand(executablePath string, cachePath string) string {
+	if executablePath == "" {
+		executablePath = managedHookName
+	}
+	return shellQuote(executablePath) + " claude-hook-cache-writer --cache " + shellQuote(cachePath)
 }
 
 func RunClaudeHookCacheWriter(input io.Reader, cachePath string, now time.Time) error {
@@ -319,9 +323,12 @@ func backupFile(path string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer output.Close()
 
 	if _, err := io.Copy(output, input); err != nil {
+		_ = output.Close()
+		return "", err
+	}
+	if err := output.Close(); err != nil {
 		return "", err
 	}
 	return backupPath, nil

@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -164,6 +165,68 @@ func TestRunFirstLaunchUpgradesOldManagedHookBeforeStartingTUI(t *testing.T) {
 		t.Fatalf("expected first-launch consent prompt for old managed hook, got %q", stdout.String())
 	}
 	assertEvents(t, events, []string{"install", "tui"})
+}
+
+func TestClaudeHookInstalledIgnoresMarkerlessLLMQuotaNamedHook(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	cachePath := filepath.Join(tempDir, "claude.json")
+	config := `{"hooks":{"PostToolUse":[{"name":"llm-quota","matcher":"*","hooks":[{"type":"command","command":"llm-quota claude-hook-cache-writer --cache ` + cachePath + `"}]}]}}`
+	if err := os.WriteFile(configPath, []byte(config), 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	installed, err := claudeHookInstalled(install.ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		CachePath:        cachePath,
+	})
+	if err != nil {
+		t.Fatalf("claudeHookInstalled returned error: %v", err)
+	}
+	if installed {
+		t.Fatalf("markerless llm-quota hook should not count as installed")
+	}
+}
+
+func TestClaudeHookInstalledMatchesQuotedCachePath(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	cachePath := filepath.Join(tempDir, "rob's cache.json")
+	command := install.ManagedHookCommand("", cachePath)
+	if !strings.Contains(command, "'\\''") {
+		t.Fatalf("test setup expected shell-quoted apostrophe in command, got %q", command)
+	}
+	config, err := json.Marshal(map[string]any{
+		"hooks": map[string]any{
+			"PostToolUse": []any{
+				map[string]any{
+					"name":             "llm-quota",
+					"llm_quota_marker": "llm-quota",
+					"matcher":          "*",
+					"hooks": []any{
+						map[string]any{"type": "command", "command": command},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(configPath, config, 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	installed, err := claudeHookInstalled(install.ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		CachePath:        cachePath,
+	})
+	if err != nil {
+		t.Fatalf("claudeHookInstalled returned error: %v", err)
+	}
+	if !installed {
+		t.Fatalf("shell-quoted cache path should count as installed")
+	}
 }
 
 func TestRunUnknownArgumentPreservesErrorAndExitCode(t *testing.T) {

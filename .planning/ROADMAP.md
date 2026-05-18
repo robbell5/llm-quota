@@ -74,7 +74,7 @@ Plans:
 
 **Wave 4** *(gap closure; blocked on installer and command setup completion)*
 
-- [ ] 02-05-PLAN.md — Close Claude hook shape and cache-writer verification gaps.
+- [x] 02-05-PLAN.md — Close Claude hook shape and cache-writer verification gaps.
 **UI hint**: yes
 
 ### Phase 3: Refresh and Resilience Loop
@@ -132,7 +132,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
-| 2. Standalone Local Data Sources | 4/5 | Gaps found | - |
+| 2. Standalone Local Data Sources | 5/5 | Complete   | 2026-05-18 |
 | 3. Refresh and Resilience Loop | 0/TBD | Not started | - |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

@@ -125,6 +125,26 @@ func TestClaudeFetch(t *testing.T) {
 	}
 }
 
+func TestClaudeFetchUnreadableCacheReturnsReadError(t *testing.T) {
+	cachePath := filepath.Join(t.TempDir(), "claude.json")
+	if err := os.WriteFile(cachePath, []byte(`{}`), 0o600); err != nil {
+		t.Fatalf("write cache: %v", err)
+	}
+	if err := os.Chmod(cachePath, 0o000); err != nil {
+		t.Fatalf("chmod cache: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(cachePath, 0o600) })
+	if _, err := os.ReadFile(cachePath); err == nil {
+		t.Skip("test filesystem did not enforce unreadable cache permissions")
+	}
+
+	windows, err := NewClaudeReader(cachePath).Fetch(time.Unix(1_778_940_000, 0))
+	assertSourceError(t, err, ErrorRead)
+	if len(windows) != 0 {
+		t.Fatalf("expected no windows on read error, got %#v", windows)
+	}
+}
+
 func assertSourceError(t *testing.T, err error, category ErrorCategory) {
 	t.Helper()
 

@@ -195,10 +195,15 @@ func defaultClaudeHookPaths() (install.ClaudeHookPaths, error) {
 	if err != nil {
 		return install.ClaudeHookPaths{}, err
 	}
+	executablePath, err := os.Executable()
+	if err != nil {
+		return install.ClaudeHookPaths{}, err
+	}
 	return install.ClaudeHookPaths{
 		ClaudeConfigPath: filepath.Join(home, ".claude", "settings.json"),
 		StatePath:        filepath.Join(home, ".cache", "llm-quota", "state.json"),
 		CachePath:        filepath.Join(home, ".cache", "llm-quota", "claude.json"),
+		ExecutablePath:   executablePath,
 	}, nil
 }
 
@@ -231,15 +236,15 @@ func claudeHookInstalled(paths install.ClaudeHookPaths) (bool, error) {
 		if !ok {
 			continue
 		}
-		if isCurrentManagedClaudeHook(hook, paths.CachePath) {
+		if isCurrentManagedClaudeHook(hook, paths.ExecutablePath, paths.CachePath) {
 			return true, nil
 		}
 	}
 	return false, nil
 }
 
-func isCurrentManagedClaudeHook(hook map[string]any, cachePath string) bool {
-	if hook["name"] != "llm-quota" && hook["llm_quota_marker"] != "llm-quota" {
+func isCurrentManagedClaudeHook(hook map[string]any, executablePath string, cachePath string) bool {
+	if hook["llm_quota_marker"] != "llm-quota" {
 		return false
 	}
 	if hook["matcher"] != "*" {
@@ -257,7 +262,7 @@ func isCurrentManagedClaudeHook(hook map[string]any, cachePath string) bool {
 	if !ok {
 		return false
 	}
-	return strings.Contains(command, "claude-hook-cache-writer --cache") && strings.Contains(command, cachePath)
+	return command == install.ManagedHookCommand(executablePath, cachePath)
 }
 
 func startTUI() error {

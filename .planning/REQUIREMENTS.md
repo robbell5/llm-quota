@@ -18,9 +18,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Claude Setup
 
-- [ ] **CLD-01**: User is prompted for permission to install the `llm-quota` Claude hook/cache writer during setup or first launch.
-- [ ] **CLD-02**: User can decline Claude hook installation and still run the TUI with clear Claude placeholder rows.
-- [ ] **CLD-03**: User can install or update only the `llm-quota`-owned Claude hook without overwriting unrelated Claude configuration.
+- [x] **CLD-01**: User is prompted for permission to install the `llm-quota` Claude hook/cache writer during setup or first launch.
+- [x] **CLD-02**: User can decline Claude hook installation and still run the TUI with clear Claude placeholder rows.
+- [x] **CLD-03**: User can install or update only the `llm-quota`-owned Claude hook without overwriting unrelated Claude configuration.
 - [x] **CLD-04**: User can get Claude quota data from `~/.cache/llm-quota/claude.json` after the hook has run.
 
 ### Local Sources
@@ -92,9 +92,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DISP-04 | Phase 4 | Pending |
 | DISP-05 | Phase 4 | Pending |
 | DISP-06 | Phase 4 | Pending |
-| CLD-01 | Phase 2 | Pending |
-| CLD-02 | Phase 2 | Pending |
-| CLD-03 | Phase 2 | Pending |
+| CLD-01 | Phase 2 | Complete |
+| CLD-02 | Phase 2 | Complete |
+| CLD-03 | Phase 2 | Complete |
 | CLD-04 | Phase 2 | Complete |
 | SRC-01 | Phase 2 | Pending |
 | SRC-02 | Phase 2 | Pending |

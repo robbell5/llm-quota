@@ -14,7 +14,7 @@ const (
 )
 
 const (
-	fullFooter    = "q / Ctrl-C quit · Claude: install hook · Codex: open Codex"
+	fullFooter    = "q / Ctrl-C quit · Claude: run install-claude-hook · Codex: open Codex"
 	compactFooter = "q / Ctrl-C quit · data pending"
 )
 

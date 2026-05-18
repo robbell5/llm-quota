@@ -11,7 +11,7 @@ import (
 var ansiEscapeRE = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
 
 func TestRenderStartupScreen(t *testing.T) {
-	full := render(Model{width: 72, height: 12})
+	full := render(Model{width: 80, height: 12})
 
 	if !strings.Contains(full, "LLM Quota") {
 		t.Fatalf("expected title in startup screen, got:\n%s", full)

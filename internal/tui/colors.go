@@ -8,6 +8,7 @@ var (
 	mochaText     = lipgloss.Color("#cdd6f4")
 	mochaSubtext0 = lipgloss.Color("#a6adc8")
 	mochaBlue     = lipgloss.Color("#89b4fa")
+	mochaGreen    = lipgloss.Color("#a6e3a1")
 	mochaYellow   = lipgloss.Color("#f9e2af")
 	mochaRed      = lipgloss.Color("#f38ba8")
 )

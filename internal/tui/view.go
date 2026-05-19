@@ -2,10 +2,12 @@ package tui
 
 import (
 	"fmt"
+	"image/color"
 	"math"
 	"strings"
 	"time"
 
+	"charm.land/bubbles/v2/progress"
 	"charm.land/lipgloss/v2"
 
 	"github.com/rob/llm-quota/internal/sources"
@@ -35,6 +37,12 @@ var (
 	missingStyle = lipgloss.NewStyle().Foreground(mochaYellow)
 	hintStyle    = lipgloss.NewStyle().Foreground(mochaSubtext0)
 	footerStyle  = lipgloss.NewStyle().Foreground(mochaSubtext0)
+)
+
+const (
+	fullRowLabelWidth  = 9
+	shortRowLabelWidth = 5
+	minProgressWidth   = 6
 )
 
 func render(m Model) string {
@@ -121,21 +129,38 @@ func findWindow(m Model, product sources.Product, kind sources.WindowKind) (sour
 }
 
 func renderDataRow(fullLabel string, shortLabel string, window sources.Window, now time.Time, width int) string {
-	percent := fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))
+	percent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent)))
 	reset := resetText(window.ResetsAt, now)
 
 	switch {
-	case width >= 41:
+	case width >= 46:
+		barWidth := width - fullRowLabelWidth - lipgloss.Width(fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))) - lipgloss.Width(reset) - 6
+		if barWidth < minProgressWidth {
+			barWidth = minProgressWidth
+		}
+
 		return fmt.Sprintf(
-			"%s  %s  reset %s",
+			"%s  %s  %s  %s",
 			labelStyle.Render(fmt.Sprintf("%-9s", fullLabel)),
+			renderProgressBar(window.UsedPercent, barWidth),
 			percent,
 			reset,
 		)
-	case width >= 21:
+	case width >= 26:
+		barWidth := width - shortRowLabelWidth - lipgloss.Width(fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))) - lipgloss.Width(reset) - 3
+		if barWidth >= minProgressWidth {
+			return fmt.Sprintf(
+				"%s %s %s %s",
+				labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)),
+				renderProgressBar(window.UsedPercent, barWidth),
+				percent,
+				reset,
+			)
+		}
+
 		return fmt.Sprintf(
 			"%s  %s  %s",
-			labelStyle.Render(fmt.Sprintf("%-9s", fullLabel)),
+			labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)),
 			percent,
 			reset,
 		)
@@ -148,28 +173,58 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, n
 	}
 }
 
+func thresholdColor(percent float64) color.Color {
+	if percent >= 85 {
+		return mochaRed
+	}
+	if percent >= 60 {
+		return mochaYellow
+	}
+
+	return mochaGreen
+}
+
+func progressFraction(percent float64) float64 {
+	if percent < 0 {
+		return 0
+	}
+	if percent > 100 {
+		return 1
+	}
+
+	return percent / 100
+}
+
+func renderProgressBar(percent float64, width int) string {
+	if width < 1 {
+		width = 1
+	}
+	p := progress.New(progress.WithWidth(width), progress.WithColors(thresholdColor(percent)))
+	p.EmptyColor = mochaSurface0
+
+	return p.ViewAs(progressFraction(percent))
+}
+
 func resetText(resetsAt time.Time, now time.Time) string {
 	if resetsAt.IsZero() {
 		return missingStyle.Render("—")
 	}
 
 	remaining := resetsAt.Sub(now)
-	if remaining < 0 {
-		remaining = 0
+	if remaining <= 0 {
+		return "now"
 	}
+
+	totalMinutes := int(remaining / time.Minute)
 	if remaining >= 24*time.Hour {
-		days := int(math.Ceil(remaining.Hours() / 24))
-		return fmt.Sprintf("%dd", days)
+		days := totalMinutes / int((24 * time.Hour / time.Minute))
+		hours := (totalMinutes % int((24 * time.Hour / time.Minute))) / int(time.Hour/time.Minute)
+		return fmt.Sprintf("%dd %02dh", days, hours)
 	}
-	if remaining >= time.Hour {
-		hours := int(math.Ceil(remaining.Hours()))
-		return fmt.Sprintf("%dh", hours)
-	}
-	minutes := int(math.Ceil(remaining.Minutes()))
-	if minutes < 1 {
-		minutes = 1
-	}
-	return fmt.Sprintf("%dm", minutes)
+
+	hours := totalMinutes / int(time.Hour/time.Minute)
+	minutes := totalMinutes % int(time.Hour/time.Minute)
+	return fmt.Sprintf("%dh %dm", hours, minutes)
 }
 
 func renderFooter(width int) string {

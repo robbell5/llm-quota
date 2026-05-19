@@ -9,12 +9,12 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Quota Display
 
-- [ ] **DISP-01**: User can see Claude Code 5-hour quota usage in the TUI.
-- [ ] **DISP-02**: User can see Claude Code 7-day quota usage in the TUI.
-- [ ] **DISP-03**: User can see Codex 5-hour quota usage in the TUI.
-- [ ] **DISP-04**: User can see Codex 7-day quota usage in the TUI.
-- [ ] **DISP-05**: User can see percent used, a colored progress bar, and reset countdown for each available quota window.
-- [ ] **DISP-06**: User can interpret quota urgency from green, yellow, and red usage thresholds.
+- [x] **DISP-01**: User can see Claude Code 5-hour quota usage in the TUI.
+- [x] **DISP-02**: User can see Claude Code 7-day quota usage in the TUI.
+- [x] **DISP-03**: User can see Codex 5-hour quota usage in the TUI.
+- [x] **DISP-04**: User can see Codex 7-day quota usage in the TUI.
+- [x] **DISP-05**: User can see percent used, a colored progress bar, and reset countdown for each available quota window.
+- [x] **DISP-06**: User can interpret quota urgency from green, yellow, and red usage thresholds.
 
 ### Claude Setup
 
@@ -47,7 +47,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TEST-01**: Maintainer can verify Claude cache parsing for valid, missing, malformed, and stale cache files without touching real home-directory data.
 - [x] **TEST-02**: Maintainer can verify Codex rollout parsing for newest-file selection, null rate limits, malformed events, and missing usable events.
 - [x] **TEST-03**: Maintainer can verify refresh merge behavior preserves last-known-good data after source failures.
-- [ ] **TEST-04**: Maintainer can verify rendered output for normal, mixed-threshold, missing-source, stale-source, and narrow-width states.
+- [x] **TEST-04**: Maintainer can verify rendered output for normal, mixed-threshold, missing-source, stale-source, and narrow-width states.
 
 ## v2 Requirements
 
@@ -86,12 +86,12 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| DISP-01 | Phase 4 | Pending |
-| DISP-02 | Phase 4 | Pending |
-| DISP-03 | Phase 4 | Pending |
-| DISP-04 | Phase 4 | Pending |
-| DISP-05 | Phase 4 | Pending |
-| DISP-06 | Phase 4 | Pending |
+| DISP-01 | Phase 4 | Complete |
+| DISP-02 | Phase 4 | Complete |
+| DISP-03 | Phase 4 | Complete |
+| DISP-04 | Phase 4 | Complete |
+| DISP-05 | Phase 4 | Complete |
+| DISP-06 | Phase 4 | Complete |
 | CLD-01 | Phase 2 | Complete |
 | CLD-02 | Phase 2 | Complete |
 | CLD-03 | Phase 2 | Complete |
@@ -112,7 +112,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Complete |
-| TEST-04 | Phase 4 | Pending |
+| TEST-04 | Phase 4 | Complete |
 
 **Coverage:**
 

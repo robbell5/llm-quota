@@ -124,7 +124,7 @@ Cross-cutting constraints:
 Plans:
 **Wave 1**
 
-- [ ] 04-01-PLAN.md — Render final quota data rows with threshold progress bars, percent text, and reset tokens.
+- [x] 04-01-PLAN.md — Render final quota data rows with threshold progress bars, percent text, and reset tokens.
 
 **Wave 2** *(blocked on Wave 1 data-row rendering)*
 
@@ -157,5 +157,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
 | 2. Standalone Local Data Sources | 5/5 | Complete   | 2026-05-18 |
 | 3. Refresh and Resilience Loop | 2/2 | Complete   | 2026-05-19 |
-| 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
+| 4. Quota Display and Responsive Rendering | 1/2 | In Progress|  |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

@@ -109,6 +109,66 @@ func TestRenderSourceBackedRowsWithoutPhaseFourCopy(t *testing.T) {
 	}
 }
 
+func TestRenderQuotaRowsWithThresholdProgressBars(t *testing.T) {
+	fixedNow := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	model := NewModel(WithClock(func() time.Time { return fixedNow }))
+	model.height = 12
+	model.windows[sources.ProductClaude] = []sources.Window{
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowFiveHour,
+			Label:       "Claude 5h",
+			UsedPercent: 59,
+			ResetsAt:    fixedNow.Add(2*time.Hour + 14*time.Minute),
+			CapturedAt:  fixedNow,
+		},
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowSevenDay,
+			Label:       "Claude 7d",
+			UsedPercent: 60,
+			ResetsAt:    fixedNow.Add(4*24*time.Hour + 6*time.Hour),
+			CapturedAt:  fixedNow,
+		},
+	}
+	model.windows[sources.ProductCodex] = []sources.Window{
+		{
+			Product:     sources.ProductCodex,
+			Kind:        sources.WindowFiveHour,
+			Label:       "Codex 5h",
+			UsedPercent: 85,
+			ResetsAt:    fixedNow.Add(-time.Minute),
+			CapturedAt:  fixedNow,
+		},
+		{
+			Product:     sources.ProductCodex,
+			Kind:        sources.WindowSevenDay,
+			Label:       "Codex 7d",
+			UsedPercent: 17,
+			ResetsAt:    fixedNow.Add(5*24*time.Hour + 2*time.Hour),
+			CapturedAt:  fixedNow,
+		},
+	}
+
+	for _, width := range []int{80, 50} {
+		model.width = width
+		rendered := render(model)
+		plain := ansiEscapeRE.ReplaceAllString(rendered, "")
+
+		for _, want := range []string{
+			"Claude 5h", "Claude 7d", "Codex 5h", "Codex 7d",
+			"59%", "60%", "85%", "17%",
+			"2h 14m", "4d 06h", "now", "5d 02h",
+		} {
+			if !strings.Contains(plain, want) {
+				t.Fatalf("width %d: expected rendered quota rows to contain %q, got:\n%s", width, want, plain)
+			}
+		}
+
+		assertRenderedLineWidths(t, rendered, width)
+	}
+}
+
 func assertRenderedLineWidths(t *testing.T, rendered string, maxWidth int) {
 	t.Helper()
 

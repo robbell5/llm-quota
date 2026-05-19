@@ -90,7 +90,21 @@ Plans:
   4. User sees stale-data warnings when displayed quota data is older than the accepted freshness threshold.
   5. Maintainer can verify refresh merge behavior preserves last-known-good data after source failures.
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 03-01-PLAN.md — Build the tested refresh state machine, tick/manual commands, stale policy, and last-known-good merge behavior.
+
+**Wave 2** *(blocked on Wave 1 completion)*
+
+- [ ] 03-02-PLAN.md — Wire real local readers at startup and render minimal source-backed rows within the Phase 3 UI contract.
+
+Cross-cutting constraints:
+
+- Preserve last-known-good data independently per source through temporary refresh failures.
+- Treat data older than one hour as stale while keeping stale-but-valid values available.
+- Keep resize as layout rerender only; source refresh remains startup, timer, and manual `r` owned.
 **UI hint**: yes
 
 ### Phase 4: Quota Display and Responsive Rendering

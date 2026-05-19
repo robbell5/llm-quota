@@ -120,7 +120,16 @@ Cross-cutting constraints:
   4. User can resize the tmux pane and still read useful quota status, including very narrow panes where bars are omitted.
   5. User sees helpful placeholder rows and footer hints when source data is missing, malformed, stale, or temporarily unavailable.
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 04-01-PLAN.md — Render final quota data rows with threshold progress bars, percent text, and reset tokens.
+
+**Wave 2** *(blocked on Wave 1 data-row rendering)*
+
+- [ ] 04-02-PLAN.md — Add missing/stale footer hints and responsive no-wrap layouts for narrow tmux panes.
+
 **UI hint**: yes
 
 ### Phase 5: Install, Docs, and Real-Pane Validation

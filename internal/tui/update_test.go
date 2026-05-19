@@ -233,7 +233,7 @@ func TestRefresh(t *testing.T) {
 		for _, category := range categories {
 			err := sources.SourceError{Source: sources.ProductClaude, Category: category, Err: errors.New(string(category))}
 			updated, _ := NewModel().Update(refreshMsg{
-				results: []sourceRefreshResult{{product: sources.ProductClaude, err: err}},
+				results:   []sourceRefreshResult{{product: sources.ProductClaude, err: err}},
 				fetchedAt: fixedNow,
 			})
 			model := updated.(Model)
@@ -284,7 +284,7 @@ func TestRefresh(t *testing.T) {
 			StaleAge:    2 * time.Hour,
 		}}
 
-		view := model.View().String()
+		view := render(model)
 		for _, forbidden := range []string{"refreshing", "last updated", "stale"} {
 			if contains(view, forbidden) {
 				t.Fatalf("did not expect visible %q copy in Phase 3 view: %q", forbidden, view)

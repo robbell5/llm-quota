@@ -1,4 +1,4 @@
-<!-- markdownlint-disable MD013 -->
+<!-- markdownlint-disable MD013 MD060 -->
 
 # Phase 4 Pattern Map
 

@@ -37,8 +37,8 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **TUI-02**: User sees quota data refresh automatically every 30 seconds.
 - [x] **TUI-03**: User can press `r` to refresh quota data immediately without disrupting the next scheduled refresh.
 - [ ] **TUI-04**: User can press `q` or `Ctrl-C` to exit cleanly.
-- [ ] **TUI-05**: User can resize the terminal pane and see the layout adapt without wrapping or breaking rows.
-- [ ] **TUI-06**: User can still read useful quota status in very narrow panes where progress bars are omitted.
+- [x] **TUI-05**: User can resize the terminal pane and see the layout adapt without wrapping or breaking rows.
+- [x] **TUI-06**: User can still read useful quota status in very narrow panes where progress bars are omitted.
 
 ### Documentation and Verification
 
@@ -105,8 +105,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TUI-02 | Phase 3 | Complete |
 | TUI-03 | Phase 3 | Complete |
 | TUI-04 | Phase 1 | Pending |
-| TUI-05 | Phase 4 | Pending |
-| TUI-06 | Phase 4 | Pending |
+| TUI-05 | Phase 4 | Complete |
+| TUI-06 | Phase 4 | Complete |
 | DOC-01 | Phase 5 | Pending |
 | DOC-02 | Phase 5 | Pending |
 | TEST-01 | Phase 2 | Complete |

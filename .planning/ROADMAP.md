@@ -94,11 +94,11 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 03-01-PLAN.md — Build the tested refresh state machine, tick/manual commands, stale policy, and last-known-good merge behavior.
+- [x] 03-01-PLAN.md — Build the tested refresh state machine, tick/manual commands, stale policy, and last-known-good merge behavior.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 03-02-PLAN.md — Wire real local readers at startup and render minimal source-backed rows within the Phase 3 UI contract.
+- [x] 03-02-PLAN.md — Wire real local readers at startup and render minimal source-backed rows within the Phase 3 UI contract.
 
 Cross-cutting constraints:
 

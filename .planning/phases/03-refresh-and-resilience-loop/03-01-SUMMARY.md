@@ -22,7 +22,7 @@ tech-stack:
 
 key-files:
   created:
-    - .planning/phases/03-refresh-and-resilience-loop/03-refresh-and-resilience-loop-01-SUMMARY.md
+    - .planning/phases/03-refresh-and-resilience-loop/03-01-SUMMARY.md
   modified:
     - internal/tui/model.go
     - internal/tui/update.go
@@ -81,7 +81,7 @@ Each task was committed atomically:
 - `internal/tui/model.go` - Adds the source reader interface, injected model options, refresh timing defaults, stale threshold, last-known-good windows, typed errors, and refresh in-flight state.
 - `internal/tui/update.go` - Adds refresh request, tick, and result messages plus concurrent source fetching and per-source merge behavior.
 - `internal/tui/update_test.go` - Adds fake-reader regression tests for refresh lifecycle, merge resilience, stale state, typed errors, and resize behavior.
-- `.planning/phases/03-refresh-and-resilience-loop/03-refresh-and-resilience-loop-01-SUMMARY.md` - Documents plan execution results.
+- `.planning/phases/03-refresh-and-resilience-loop/03-01-SUMMARY.md` - Documents plan execution results.
 
 ## Decisions Made
 

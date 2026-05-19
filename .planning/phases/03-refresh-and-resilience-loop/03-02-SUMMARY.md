@@ -70,7 +70,7 @@ Each task was committed atomically:
 4. **Task 2 GREEN: minimal quota row rendering** - `9852b9e` (feat)
 5. **Task 3: phase verification** - no code commit; verification-only task with no repository changes
 
-**Plan metadata:** pending final docs commit
+**Plan metadata:** committed separately after state and roadmap updates.
 
 ## Files Created/Modified
 

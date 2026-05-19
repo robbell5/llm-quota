@@ -34,24 +34,23 @@ func TestRenderStartupScreen(t *testing.T) {
 		t.Fatalf("expected missing local data hint in rows, got:\n%s", full)
 	}
 
-	const fullFooter = "q / Ctrl-C quit · Claude: run install-claude-hook · Codex: open Codex"
-	if !strings.Contains(full, fullFooter) {
-		t.Fatalf("expected full footer %q in:\n%s", fullFooter, full)
+	const baselineFooter = "q / Ctrl-C quit · r refresh"
+	if !strings.Contains(full, baselineFooter) {
+		t.Fatalf("expected baseline footer %q in:\n%s", baselineFooter, full)
 	}
 
-	if strings.Contains(full, "r refresh") || strings.Contains(full, " refresh") || strings.Contains(full, " · r") {
-		t.Fatalf("startup screen should not advertise an r refresh key:\n%s", full)
+	if strings.Contains(full, "Claude: run install-claude-hook") || strings.Contains(full, "Codex: open Codex") {
+		t.Fatalf("startup screen should wait for source errors before showing recovery hints:\n%s", full)
 	}
 
 	compact := render(Model{width: 49, height: 12})
-	const compactFooter = "q / Ctrl-C quit · data pending"
-	if !strings.Contains(compact, compactFooter) {
-		t.Fatalf("expected compact footer %q in:\n%s", compactFooter, compact)
+	if !strings.Contains(compact, baselineFooter) {
+		t.Fatalf("expected compact baseline footer %q in:\n%s", baselineFooter, compact)
 	}
 
 	atFifty := render(Model{width: 50, height: 12})
-	if !strings.Contains(atFifty, compactFooter) {
-		t.Fatalf("expected compact footer at width 50 in:\n%s", atFifty)
+	if !strings.Contains(atFifty, baselineFooter) {
+		t.Fatalf("expected baseline footer at width 50 in:\n%s", atFifty)
 	}
 
 	if strings.Contains(compact, "Claude: run install-claude-hook") || strings.Contains(compact, "Codex: open Codex") {

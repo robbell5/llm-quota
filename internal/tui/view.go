@@ -20,8 +20,11 @@ const (
 )
 
 const (
-	fullFooter    = "q / Ctrl-C quit · Claude: run install-claude-hook · Codex: open Codex"
-	compactFooter = "q / Ctrl-C quit · data pending"
+	quitHint          = "q / Ctrl-C quit"
+	refreshHint       = "r refresh"
+	claudeInstallHint = "Claude: run install-claude-hook"
+	claudeOpenHint    = "Claude: open Claude"
+	codexOpenHint     = "Codex: open Codex"
 )
 
 var (
@@ -60,7 +63,7 @@ func render(m Model) string {
 		dividerStyle.Render(strings.Repeat("─", innerWidth)),
 		renderRows(m, innerWidth),
 		"",
-		footerStyle.Width(innerWidth).Render(renderFooter(width)),
+		footerStyle.Width(innerWidth).Render(renderFooter(m, innerWidth)),
 	}, "\n")
 
 	return shellStyle.Render(content) + "\n"
@@ -91,7 +94,7 @@ func renderRows(m Model, width int) string {
 		}
 
 		switch {
-		case width >= 41:
+		case width >= 46:
 			rows = append(rows, fmt.Sprintf(
 				"%s  %s  %s  reset %s",
 				labelStyle.Render(fmt.Sprintf("%-9s", label.full)),
@@ -99,10 +102,10 @@ func renderRows(m Model, width int) string {
 				hintStyle.Render("missing local data"),
 				missingStyle.Render("—"),
 			))
-		case width >= 21:
+		case width >= 26:
 			rows = append(rows, fmt.Sprintf(
 				"%s  %s  %s",
-				labelStyle.Render(fmt.Sprintf("%-9s", label.full)),
+				labelStyle.Render(fmt.Sprintf("%-5s", label.short)),
 				missingStyle.Render("—"),
 				hintStyle.Render("pending"),
 			))
@@ -165,11 +168,17 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, n
 			reset,
 		)
 	default:
-		return fmt.Sprintf(
-			"%s %s",
+		withReset := fmt.Sprintf(
+			"%s %s %s",
 			labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)),
 			percent,
+			reset,
 		)
+		if lipgloss.Width(withReset) <= width {
+			return withReset
+		}
+
+		return fmt.Sprintf("%s %s", labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)), percent)
 	}
 }
 
@@ -199,7 +208,7 @@ func renderProgressBar(percent float64, width int) string {
 	if width < 1 {
 		width = 1
 	}
-	p := progress.New(progress.WithWidth(width), progress.WithColors(thresholdColor(percent)))
+	p := progress.New(progress.WithWidth(width), progress.WithColors(thresholdColor(percent)), progress.WithoutPercentage())
 	p.EmptyColor = mochaSurface0
 
 	return p.ViewAs(progressFraction(percent))
@@ -227,10 +236,105 @@ func resetText(resetsAt time.Time, now time.Time) string {
 	return fmt.Sprintf("%dh %dm", hours, minutes)
 }
 
-func renderFooter(width int) string {
-	if lipgloss.Width(fullFooter)+shellHorizontalPadding > width {
-		return compactFooter
+func renderFooter(m Model, innerWidth int) string {
+	hints := footerRecoveryHints(m)
+	if len(hints) == 0 {
+		return appendHintWithinWidth("", []string{quitHint, refreshHint}, innerWidth)
 	}
 
-	return fullFooter
+	footer := appendHintWithinWidth("", hints, innerWidth)
+	if footer != "" {
+		return footer
+	}
+
+	return appendHintWithinWidth("", []string{quitHint}, innerWidth)
+}
+
+func footerRecoveryHints(m Model) []string {
+	hints := make([]string, 0, 2)
+
+	if !hasWindows(m, sources.ProductClaude) {
+		if err, ok := m.errors[sources.ProductClaude]; ok {
+			if err.Category == sources.ErrorMissing {
+				hints = append(hints, claudeInstallHint)
+			} else {
+				hints = append(hints, claudeOpenHint)
+			}
+		}
+	}
+	if !hasWindows(m, sources.ProductCodex) {
+		if _, ok := m.errors[sources.ProductCodex]; ok {
+			hints = append(hints, codexOpenHint)
+		}
+	}
+
+	if len(hints) > 0 {
+		return hints
+	}
+
+	if hint, ok := staleHint(m, sources.ProductClaude, "Claude", "open Claude"); ok {
+		hints = append(hints, hint)
+	}
+	if hint, ok := staleHint(m, sources.ProductCodex, "Codex", "open Codex"); ok {
+		hints = append(hints, hint)
+	}
+
+	return hints
+}
+
+func hasWindows(m Model, product sources.Product) bool {
+	return len(m.windows[product]) > 0
+}
+
+func staleHint(m Model, product sources.Product, label string, action string) (string, bool) {
+	now := time.Now
+	if m.now != nil {
+		now = m.now
+	}
+
+	for _, window := range m.windows[product] {
+		if !window.Stale {
+			continue
+		}
+
+		age := window.StaleAge
+		if age <= 0 && !window.CapturedAt.IsZero() {
+			age = now().Sub(window.CapturedAt)
+		}
+
+		return fmt.Sprintf("%s data %s old; %s", label, ageText(age), action), true
+	}
+
+	return "", false
+}
+
+func ageText(age time.Duration) string {
+	if age < 0 {
+		age = 0
+	}
+	if age >= 24*time.Hour {
+		return fmt.Sprintf("%dd", int(age/(24*time.Hour)))
+	}
+	if age >= time.Hour {
+		return fmt.Sprintf("%dh", int(age/time.Hour))
+	}
+
+	return fmt.Sprintf("%dm", int(age/time.Minute))
+}
+
+func appendHintWithinWidth(base string, hints []string, width int) string {
+	footer := base
+	for _, hint := range hints {
+		candidate := hint
+		if footer != "" {
+			candidate = footer + " · " + hint
+		}
+		if lipgloss.Width(candidate) > width {
+			continue
+		}
+
+		footer = candidate
+	}
+
+	return footer
 }

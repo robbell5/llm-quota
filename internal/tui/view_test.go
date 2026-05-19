@@ -4,8 +4,11 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+	"time"
 
 	"charm.land/lipgloss/v2"
+
+	"github.com/rob/llm-quota/internal/sources"
 )
 
 var ansiEscapeRE = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
@@ -57,6 +60,52 @@ func TestRenderStartupScreen(t *testing.T) {
 
 	for _, width := range []int{50, 49, 29} {
 		assertRenderedLineWidths(t, render(Model{width: width, height: 12}), width)
+	}
+}
+
+func TestRenderSourceBackedRowsWithoutPhaseFourCopy(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	model := NewModel()
+	model.width = 80
+	model.height = 12
+	model.windows[sources.ProductClaude] = []sources.Window{
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowFiveHour,
+			Label:       "Claude 5h",
+			UsedPercent: 42,
+			ResetsAt:    now.Add(2 * time.Hour),
+			CapturedAt:  now.Add(-2 * time.Hour),
+			Stale:       true,
+			StaleAge:    2 * time.Hour,
+		},
+	}
+	model.windows[sources.ProductCodex] = []sources.Window{
+		{
+			Product:     sources.ProductCodex,
+			Kind:        sources.WindowSevenDay,
+			Label:       "Codex 7d",
+			UsedPercent: 17.4,
+			ResetsAt:    now.Add(7 * 24 * time.Hour),
+			CapturedAt:  now,
+		},
+	}
+
+	rendered := render(model)
+	plain := ansiEscapeRE.ReplaceAllString(rendered, "")
+	for _, want := range []string{"Claude 5h", "42%", "Codex 7d", "17%"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected rendered source-backed rows to contain %q, got:\n%s", want, plain)
+		}
+	}
+	if strings.Contains(plain, "Claude 5h  —  missing local data") {
+		t.Fatalf("stale-but-valid Claude data should render as data, not placeholder:\n%s", plain)
+	}
+
+	for _, forbidden := range []string{"refreshing", "last updated", "r refresh", "stale"} {
+		if strings.Contains(strings.ToLower(plain), forbidden) {
+			t.Fatalf("render output should not contain Phase 4 copy %q:\n%s", forbidden, plain)
+		}
 	}
 }
 

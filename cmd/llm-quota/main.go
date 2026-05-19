@@ -12,6 +12,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 	"github.com/rob/llm-quota/internal/install"
+	"github.com/rob/llm-quota/internal/sources"
 	"github.com/rob/llm-quota/internal/tui"
 )
 
@@ -27,7 +28,8 @@ type appDeps struct {
 	ClaudeHookDeclined       func(string) (bool, error)
 	RecordClaudeHookDeclined func(string) error
 	InstallClaudeHook        func(install.ClaudeHookPaths) (install.InstallResult, error)
-	StartTUI                 func() error
+	CodexSessionsRoot        func() (string, error)
+	StartTUI                 func(tui.Model) error
 }
 
 func main() {
@@ -58,7 +60,13 @@ func run(args []string, streams appStreams, deps appDeps) int {
 		return code
 	}
 
-	if err := deps.StartTUI(); err != nil {
+	model, err := sourceBackedModel(deps)
+	if err != nil {
+		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
+		return 1
+	}
+
+	if err := deps.StartTUI(model); err != nil {
 		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
 		return 1
 	}
@@ -184,10 +192,36 @@ func (deps appDeps) withDefaults() appDeps {
 	if deps.InstallClaudeHook == nil {
 		deps.InstallClaudeHook = install.InstallClaudeHook
 	}
+	if deps.CodexSessionsRoot == nil {
+		deps.CodexSessionsRoot = defaultCodexSessionsRoot
+	}
 	if deps.StartTUI == nil {
 		deps.StartTUI = startTUI
 	}
 	return deps
+}
+
+func sourceBackedModel(deps appDeps) (tui.Model, error) {
+	paths, err := deps.Paths()
+	if err != nil {
+		return tui.Model{}, err
+	}
+	codexSessionsRoot, err := deps.CodexSessionsRoot()
+	if err != nil {
+		return tui.Model{}, err
+	}
+
+	claudeReader := sources.NewClaudeReader(paths.CachePath)
+	codexReader := sources.NewCodexReader(codexSessionsRoot)
+	return tui.NewModel(tui.WithReaders(claudeReader, codexReader)), nil
+}
+
+func defaultCodexSessionsRoot() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".codex", "sessions"), nil
 }
 
 func defaultClaudeHookPaths() (install.ClaudeHookPaths, error) {
@@ -265,8 +299,8 @@ func isCurrentManagedClaudeHook(hook map[string]any, executablePath string, cach
 	return command == install.ManagedHookCommand(executablePath, cachePath)
 }
 
-func startTUI() error {
-	program := tea.NewProgram(tui.NewModel())
+func startTUI(model tui.Model) error {
+	program := tea.NewProgram(model)
 	_, err := program.Run()
 	return err
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -390,14 +391,15 @@ func TestRunNoArgStartupConstructsSourceBackedModelWithoutStartingRealTUI(t *tes
 	if !started {
 		t.Fatal("expected no-arg startup to start TUI through injected seam")
 	}
-	if !captured.HasReadersForTest() {
-		t.Fatalf("expected source-backed model, got %#v", captured)
+	modelDebug := fmt.Sprintf("%#v", captured)
+	if !strings.Contains(modelDebug, "sources.ClaudeReader") || !strings.Contains(modelDebug, "sources.CodexReader") {
+		t.Fatalf("expected source-backed model, got %s", modelDebug)
 	}
-	if !strings.Contains(captured.DebugReadersForTest(), cachePath) {
-		t.Fatalf("expected Claude cache path %q in model readers, got %q", cachePath, captured.DebugReadersForTest())
+	if !strings.Contains(modelDebug, cachePath) {
+		t.Fatalf("expected Claude cache path %q in model readers, got %q", cachePath, modelDebug)
 	}
-	if !strings.Contains(captured.DebugReadersForTest(), codexSessions) {
-		t.Fatalf("expected Codex sessions path %q in model readers, got %q", codexSessions, captured.DebugReadersForTest())
+	if !strings.Contains(modelDebug, codexSessions) {
+		t.Fatalf("expected Codex sessions path %q in model readers, got %q", codexSessions, modelDebug)
 	}
 }
 

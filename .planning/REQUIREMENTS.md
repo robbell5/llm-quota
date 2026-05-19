@@ -28,14 +28,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **SRC-01**: User can get Codex quota data from the most recent local Codex rollout JSONL file.
 - [x] **SRC-02**: User sees Codex placeholder rows and a concise hint when no usable Codex quota event exists.
 - [x] **SRC-03**: User sees Claude placeholder rows and a concise hook/setup hint when the Claude cache is missing, malformed, or unavailable.
-- [ ] **SRC-04**: User continues seeing last-known-good rows when a later refresh fails for one source.
-- [ ] **SRC-05**: User sees stale-data warnings when displayed quota data is older than the accepted freshness threshold.
+- [x] **SRC-04**: User continues seeing last-known-good rows when a later refresh fails for one source.
+- [x] **SRC-05**: User sees stale-data warnings when displayed quota data is older than the accepted freshness threshold.
 
 ### TUI Runtime
 
 - [ ] **TUI-01**: User can run `llm-quota` as an always-running foreground TUI.
-- [ ] **TUI-02**: User sees quota data refresh automatically every 30 seconds.
-- [ ] **TUI-03**: User can press `r` to refresh quota data immediately without disrupting the next scheduled refresh.
+- [x] **TUI-02**: User sees quota data refresh automatically every 30 seconds.
+- [x] **TUI-03**: User can press `r` to refresh quota data immediately without disrupting the next scheduled refresh.
 - [ ] **TUI-04**: User can press `q` or `Ctrl-C` to exit cleanly.
 - [ ] **TUI-05**: User can resize the terminal pane and see the layout adapt without wrapping or breaking rows.
 - [ ] **TUI-06**: User can still read useful quota status in very narrow panes where progress bars are omitted.
@@ -46,7 +46,7 @@ Requirements for initial release. Each maps to roadmap phases.
 - [ ] **DOC-02**: User can troubleshoot missing Claude or Codex data from documented placeholder hints.
 - [x] **TEST-01**: Maintainer can verify Claude cache parsing for valid, missing, malformed, and stale cache files without touching real home-directory data.
 - [x] **TEST-02**: Maintainer can verify Codex rollout parsing for newest-file selection, null rate limits, malformed events, and missing usable events.
-- [ ] **TEST-03**: Maintainer can verify refresh merge behavior preserves last-known-good data after source failures.
+- [x] **TEST-03**: Maintainer can verify refresh merge behavior preserves last-known-good data after source failures.
 - [ ] **TEST-04**: Maintainer can verify rendered output for normal, mixed-threshold, missing-source, stale-source, and narrow-width states.
 
 ## v2 Requirements
@@ -99,11 +99,11 @@ Which phases cover which requirements. Updated during roadmap creation.
 | SRC-01 | Phase 2 | Complete |
 | SRC-02 | Phase 2 | Complete |
 | SRC-03 | Phase 2 | Complete |
-| SRC-04 | Phase 3 | Pending |
-| SRC-05 | Phase 3 | Pending |
+| SRC-04 | Phase 3 | Complete |
+| SRC-05 | Phase 3 | Complete |
 | TUI-01 | Phase 1 | Pending |
-| TUI-02 | Phase 3 | Pending |
-| TUI-03 | Phase 3 | Pending |
+| TUI-02 | Phase 3 | Complete |
+| TUI-03 | Phase 3 | Complete |
 | TUI-04 | Phase 1 | Pending |
 | TUI-05 | Phase 4 | Pending |
 | TUI-06 | Phase 4 | Pending |
@@ -111,7 +111,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DOC-02 | Phase 5 | Pending |
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |
-| TEST-03 | Phase 3 | Pending |
+| TEST-03 | Phase 3 | Complete |
 | TEST-04 | Phase 4 | Pending |
 
 **Coverage:**

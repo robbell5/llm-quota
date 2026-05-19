@@ -147,6 +147,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
 | 2. Standalone Local Data Sources | 5/5 | Complete   | 2026-05-18 |
-| 3. Refresh and Resilience Loop | 0/TBD | Not started | - |
+| 3. Refresh and Resilience Loop | 1/2 | In Progress|  |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

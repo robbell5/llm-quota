@@ -15,7 +15,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foreground TUI Foundation** - Create the compiling Go/Bubble Tea app spine with clean foreground runtime and quit behavior.
 - [x] **Phase 2: Standalone Local Data Sources** - Add the app-owned Claude hook/cache setup and defensive Claude/Codex source readers. (completed 2026-05-18)
-- [ ] **Phase 3: Refresh and Resilience Loop** - Make the running TUI refresh automatically and manually while preserving last-known-good data.
+- [x] **Phase 3: Refresh and Resilience Loop** - Make the running TUI refresh automatically and manually while preserving last-known-good data. (completed 2026-05-19)
 - [ ] **Phase 4: Quota Display and Responsive Rendering** - Render all quota windows with thresholds, placeholders, footer hints, and narrow-pane layouts.
 - [ ] **Phase 5: Install, Docs, and Real-Pane Validation** - Wire real defaults and document setup/troubleshooting for a usable tmux-pane release.
 
@@ -147,6 +147,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foreground TUI Foundation | 2/2 | Complete | 2026-05-16 |
 | 2. Standalone Local Data Sources | 5/5 | Complete   | 2026-05-18 |
-| 3. Refresh and Resilience Loop | 1/2 | In Progress|  |
+| 3. Refresh and Resilience Loop | 2/2 | Complete   | 2026-05-19 |
 | 4. Quota Display and Responsive Rendering | 0/TBD | Not started | - |
 | 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |

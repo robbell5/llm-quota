@@ -21,13 +21,12 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 - Phase 03 validated per-source last-known-good data preservation when later refreshes fail.
 - Phase 03 validated source-backed startup wiring from local Claude and Codex readers into the TUI model.
 - Phase 03 validated stale model state and refresh merge behavior with automated tests; final stale warning copy remains active for Phase 4.
+- Phase 04 validated all four Claude/Codex quota rows with percent text, static colored progress bars, and reset countdown tokens.
+- Phase 04 validated missing-source and stale-source footer hints without exposing raw parser categories.
+- Phase 04 validated responsive row rendering at widths 50, 49, 30, 29, and 20 with automated ANSI-stripped width tests.
 
 ### Active
 
-- [ ] Show Claude Code 5-hour quota usage with percent, progress bar, and reset countdown.
-- [ ] Show Claude Code 7-day quota usage with percent, progress bar, and reset countdown.
-- [ ] Show Codex 5-hour quota usage with percent, progress bar, and reset countdown.
-- [ ] Show Codex 7-day quota usage with percent, progress bar, and reset countdown.
 - [ ] Refresh quota data automatically every 30 seconds while running.
 - [ ] Refresh immediately when the user presses `r` or the terminal pane is resized.
 - [ ] Exit cleanly on `q` or `Ctrl-C`.
@@ -35,9 +34,7 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 - [ ] Prompt for permission to install a small Claude hook/cache writer during setup or first launch.
 - [ ] Read Claude quota data from the local cache file written by the installed `llm-quota` Claude hook.
 - [ ] Keep rendering last-known-good data when a source temporarily fails.
-- [ ] Render helpful placeholder rows and footer hints when source data is missing or malformed.
-- [ ] Adapt layout for narrow tmux panes, including dropping bars at very narrow widths.
-- [ ] Provide tests for source parsing, stale data handling, and rendered output.
+- [ ] Validate the completed display in the intended real tmux pane and document install/troubleshooting flow.
 
 ### Out of Scope
 
@@ -80,6 +77,7 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Prompt for Claude hook installation during setup or first launch | A new user should be able to install the viewer and required Claude cache producer in one flow. | Validated in Phase 02 |
 | Read Codex data from the newest rollout JSONL | Codex writes quota data locally during interactive sessions. | Validated in Phase 02 |
 | Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | Validated in Phase 03 |
+| Use calm threshold colors instead of alerts | The pane should stay glanceable without noisy badges or warning words. | Validated in Phase 04 |
 | Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane, with a known spike to revisit if scrollback matters. | -- Pending |
 
 ## Evolution
@@ -103,4 +101,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-19 after Phase 03 completion*
+*Last updated: 2026-05-19 after Phase 04 completion*

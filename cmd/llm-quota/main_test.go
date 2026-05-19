@@ -12,6 +12,7 @@ import (
 
 	"github.com/rob/llm-quota/internal/install"
 	"github.com/rob/llm-quota/internal/sources"
+	"github.com/rob/llm-quota/internal/tui"
 )
 
 func TestRunInstallClaudeHookCommandInstallsWithoutStartingTUI(t *testing.T) {
@@ -27,7 +28,7 @@ func TestRunInstallClaudeHookCommandInstallsWithoutStartingTUI(t *testing.T) {
 			installed = true
 			return install.InstallResult{Changed: true, Message: "installed llm-quota Claude hook"}, nil
 		},
-		StartTUI: func() error {
+		StartTUI: func(model tui.Model) error {
 			tuiStarted = true
 			return nil
 		},
@@ -56,6 +57,9 @@ func TestRunFirstLaunchDeclineRecordsDeclineBeforeStartingTUI(t *testing.T) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}, appDeps{
+		CodexSessionsRoot: func() (string, error) {
+			return filepath.Join(t.TempDir(), ".codex", "sessions"), nil
+		},
 		ClaudeHookInstalled: func(paths install.ClaudeHookPaths) (bool, error) {
 			return false, nil
 		},
@@ -66,7 +70,7 @@ func TestRunFirstLaunchDeclineRecordsDeclineBeforeStartingTUI(t *testing.T) {
 			events = append(events, "decline")
 			return nil
 		},
-		StartTUI: func() error {
+		StartTUI: func(model tui.Model) error {
 			events = append(events, "tui")
 			return nil
 		},
@@ -93,6 +97,9 @@ func TestRunFirstLaunchAcceptInstallsBeforeStartingTUI(t *testing.T) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}, appDeps{
+		CodexSessionsRoot: func() (string, error) {
+			return filepath.Join(t.TempDir(), ".codex", "sessions"), nil
+		},
 		ClaudeHookInstalled: func(paths install.ClaudeHookPaths) (bool, error) {
 			return false, nil
 		},
@@ -103,7 +110,7 @@ func TestRunFirstLaunchAcceptInstallsBeforeStartingTUI(t *testing.T) {
 			events = append(events, "install")
 			return install.InstallResult{Changed: true, Message: "installed llm-quota Claude hook"}, nil
 		},
-		StartTUI: func() error {
+		StartTUI: func(model tui.Model) error {
 			events = append(events, "tui")
 			return nil
 		},
@@ -138,6 +145,9 @@ func TestRunFirstLaunchUpgradesOldManagedHookBeforeStartingTUI(t *testing.T) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}, appDeps{
+		CodexSessionsRoot: func() (string, error) {
+			return filepath.Join(tempDir, ".codex", "sessions"), nil
+		},
 		Paths: func() (install.ClaudeHookPaths, error) {
 			return install.ClaudeHookPaths{
 				ClaudeConfigPath: configPath,
@@ -152,7 +162,7 @@ func TestRunFirstLaunchUpgradesOldManagedHookBeforeStartingTUI(t *testing.T) {
 			events = append(events, "install")
 			return install.InstallResult{Changed: true, Message: "installed llm-quota Claude hook"}, nil
 		},
-		StartTUI: func() error {
+		StartTUI: func(model tui.Model) error {
 			events = append(events, "tui")
 			return nil
 		},
@@ -236,7 +246,7 @@ func TestRunUnknownArgumentPreservesErrorAndExitCode(t *testing.T) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}, appDeps{
-		StartTUI: func() error {
+		StartTUI: func(model tui.Model) error {
 			return errors.New("should not start TUI")
 		},
 	})
@@ -263,7 +273,7 @@ func TestRunClaudeHookCacheWriterCommandWritesCacheWithoutStartingTUI(t *testing
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}, appDeps{
-		StartTUI: func() error {
+		StartTUI: func(model tui.Model) error {
 			tuiStarted = true
 			return errors.New("should not start TUI")
 		},
@@ -318,7 +328,7 @@ func TestRunClaudeHookCacheWriterCommandRejectsMissingOrExtraArgs(t *testing.T) 
 				Stdout: &stdout,
 				Stderr: &stderr,
 			}, appDeps{
-				StartTUI: func() error {
+				StartTUI: func(model tui.Model) error {
 					tuiStarted = true
 					return errors.New("should not start TUI")
 				},
@@ -334,6 +344,60 @@ func TestRunClaudeHookCacheWriterCommandRejectsMissingOrExtraArgs(t *testing.T) 
 				t.Fatalf("stdout = %q, want empty", stdout.String())
 			}
 		})
+	}
+}
+
+func TestRunNoArgStartupConstructsSourceBackedModelWithoutStartingRealTUI(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, ".claude", "settings.json")
+	statePath := filepath.Join(tempDir, ".cache", "llm-quota", "state.json")
+	cachePath := filepath.Join(tempDir, ".cache", "llm-quota", "claude.json")
+	codexSessions := filepath.Join(tempDir, ".codex", "sessions")
+
+	var stdout, stderr bytes.Buffer
+	var captured tui.Model
+	var started bool
+
+	code := run(nil, appStreams{
+		Stdin:  strings.NewReader(""),
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}, appDeps{
+		Paths: func() (install.ClaudeHookPaths, error) {
+			return install.ClaudeHookPaths{
+				ClaudeConfigPath: configPath,
+				StatePath:        statePath,
+				CachePath:        cachePath,
+				ExecutablePath:   filepath.Join(tempDir, "llm-quota"),
+			}, nil
+		},
+		CodexSessionsRoot: func() (string, error) {
+			return codexSessions, nil
+		},
+		ClaudeHookInstalled: func(paths install.ClaudeHookPaths) (bool, error) {
+			return true, nil
+		},
+		StartTUI: func(model tui.Model) error {
+			started = true
+			captured = model
+			return nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	if !started {
+		t.Fatal("expected no-arg startup to start TUI through injected seam")
+	}
+	if !captured.HasReadersForTest() {
+		t.Fatalf("expected source-backed model, got %#v", captured)
+	}
+	if !strings.Contains(captured.DebugReadersForTest(), cachePath) {
+		t.Fatalf("expected Claude cache path %q in model readers, got %q", cachePath, captured.DebugReadersForTest())
+	}
+	if !strings.Contains(captured.DebugReadersForTest(), codexSessions) {
+		t.Fatalf("expected Codex sessions path %q in model readers, got %q", codexSessions, captured.DebugReadersForTest())
 	}
 }
 

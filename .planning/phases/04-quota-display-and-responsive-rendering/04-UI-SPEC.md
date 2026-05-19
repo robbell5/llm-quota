@@ -1,7 +1,7 @@
 ---
 phase: 4
 slug: quota-display-and-responsive-rendering
-status: draft
+status: approved
 shadcn_initialized: false
 preset: none
 created: 2026-05-19
@@ -20,6 +20,9 @@ created: 2026-05-19
 Phase 4 delivers the final v1 quota dashboard rendering: four quota rows,
 progress bars, threshold colors, reset countdowns, missing-source placeholders,
 stale-source hints, and responsive row layouts for tmux-pane widths.
+
+Primary focal point is the four quota rows, with percent text and progress fill
+carrying urgency; the title provides orientation only.
 
 This phase must not add new data sources, network fallback, notifications,
 history, forecasts, multi-account rendering, statusline integration, one-shot
@@ -222,11 +225,11 @@ width requires a narrower form to avoid wrapping.
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved

@@ -17,6 +17,10 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 - Phase 02 validated that Codex quota data can be read from local rollout JSONL files using synthetic fixtures.
 - Phase 02 validated that first launch can prompt for app-owned Claude hook installation without mutating unrelated Claude settings.
 - Phase 02 validated that the installed Claude hook command can write `ClaudeReader`-compatible cache JSON atomically.
+- Phase 03 validated automatic 30-second refresh scheduling and immediate manual `r` refresh handling in the Bubble Tea model.
+- Phase 03 validated per-source last-known-good data preservation when later refreshes fail.
+- Phase 03 validated source-backed startup wiring from local Claude and Codex readers into the TUI model.
+- Phase 03 validated stale model state and refresh merge behavior with automated tests; final stale warning copy remains active for Phase 4.
 
 ### Active
 
@@ -75,7 +79,7 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Install an app-owned Claude hook/cache writer | The TUI must work for users without Rob's custom statusline while still avoiding OAuth, Keychain reads, and network calls. | Validated in Phase 02 |
 | Prompt for Claude hook installation during setup or first launch | A new user should be able to install the viewer and required Claude cache producer in one flow. | Validated in Phase 02 |
 | Read Codex data from the newest rollout JSONL | Codex writes quota data locally during interactive sessions. | Validated in Phase 02 |
-| Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | -- Pending |
+| Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | Validated in Phase 03 |
 | Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane, with a known spike to revisit if scrollback matters. | -- Pending |
 
 ## Evolution
@@ -99,4 +103,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-18 after Phase 02 completion*
+*Last updated: 2026-05-19 after Phase 03 completion*

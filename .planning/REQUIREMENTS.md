@@ -42,8 +42,8 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Documentation and Verification
 
-- [ ] **DOC-01**: User can install the binary and complete Claude hook setup from documented instructions.
-- [ ] **DOC-02**: User can troubleshoot missing Claude or Codex data from documented placeholder hints.
+- [x] **DOC-01**: User can install the binary and complete Claude hook setup from documented instructions.
+- [x] **DOC-02**: User can troubleshoot missing Claude or Codex data from documented placeholder hints.
 - [x] **TEST-01**: Maintainer can verify Claude cache parsing for valid, missing, malformed, and stale cache files without touching real home-directory data.
 - [x] **TEST-02**: Maintainer can verify Codex rollout parsing for newest-file selection, null rate limits, malformed events, and missing usable events.
 - [x] **TEST-03**: Maintainer can verify refresh merge behavior preserves last-known-good data after source failures.
@@ -107,8 +107,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | TUI-04 | Phase 1 | Pending |
 | TUI-05 | Phase 4 | Complete |
 | TUI-06 | Phase 4 | Complete |
-| DOC-01 | Phase 5 | Pending |
-| DOC-02 | Phase 5 | Pending |
+| DOC-01 | Phase 5 | Complete |
+| DOC-02 | Phase 5 | Complete |
 | TEST-01 | Phase 2 | Complete |
 | TEST-02 | Phase 2 | Complete |
 | TEST-03 | Phase 3 | Complete |

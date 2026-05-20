@@ -17,7 +17,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [x] **Phase 2: Standalone Local Data Sources** - Add the app-owned Claude hook/cache setup and defensive Claude/Codex source readers. (completed 2026-05-18)
 - [x] **Phase 3: Refresh and Resilience Loop** - Make the running TUI refresh automatically and manually while preserving last-known-good data. (completed 2026-05-19)
 - [x] **Phase 4: Quota Display and Responsive Rendering** - Render all quota windows with thresholds, placeholders, footer hints, and narrow-pane layouts. (completed 2026-05-19)
-- [ ] **Phase 5: Install, Docs, and Real-Pane Validation** - Wire real defaults and document setup/troubleshooting for a usable tmux-pane release.
+- [x] **Phase 5: Install, Docs, and Real-Pane Validation** - Wire real defaults and document setup/troubleshooting for a usable tmux-pane release. (completed 2026-05-20)
 
 ## Phase Details
 
@@ -152,7 +152,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 README completion)*
 
-- [ ] 05-02-PLAN.md — Record final real tmux-pane validation for install/setup, cadence, keys, responsive widths, and colors.
+- [x] 05-02-PLAN.md — Record final real tmux-pane validation for install/setup, cadence, keys, responsive widths, and colors.
 
 **UI hint**: yes
 
@@ -167,4 +167,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Standalone Local Data Sources | 5/5 | Complete   | 2026-05-18 |
 | 3. Refresh and Resilience Loop | 2/2 | Complete   | 2026-05-19 |
 | 4. Quota Display and Responsive Rendering | 2/2 | Complete   | 2026-05-19 |
-| 5. Install, Docs, and Real-Pane Validation | 1/2 | In Progress|  |
+| 5. Install, Docs, and Real-Pane Validation | 2/2 | Complete   | 2026-05-20 |

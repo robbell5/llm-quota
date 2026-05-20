@@ -24,6 +24,8 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 - Phase 04 validated all four Claude/Codex quota rows with percent text, static colored progress bars, and reset countdown tokens.
 - Phase 04 validated missing-source and stale-source footer hints without exposing raw parser categories.
 - Phase 04 validated responsive row rendering at widths 50, 49, 30, 29, and 20 with automated ANSI-stripped width tests.
+- Phase 05 validated README install/setup/troubleshooting instructions and approved real tmux-pane operation.
+- Phase 05 validated Claude quota capture through an app-owned statusline cache writer that preserves symlinked settings and existing statusline behavior.
 
 ### Active
 
@@ -34,7 +36,7 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 - [ ] Prompt for permission to install a small Claude hook/cache writer during setup or first launch.
 - [ ] Read Claude quota data from the local cache file written by the installed `llm-quota` Claude hook.
 - [ ] Keep rendering last-known-good data when a source temporarily fails.
-- [ ] Validate the completed display in the intended real tmux pane and document install/troubleshooting flow.
+- [x] Validate the completed display in the intended real tmux pane and document install/troubleshooting flow.
 
 ### Out of Scope
 
@@ -79,6 +81,8 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | Validated in Phase 03 |
 | Use calm threshold colors instead of alerts | The pane should stay glanceable without noisy badges or warning words. | Validated in Phase 04 |
 | Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane, with a known spike to revisit if scrollback matters. | -- Pending |
+| Use Claude statusline wrapper for quota cache capture | Real validation showed quota `rate_limits` are available to the statusline command, not the earlier PostToolUse hook path. | Validated in Phase 05 |
+| Preserve symlinked Claude settings during install | Rob's settings are dotfiles-managed; installer writes must update the target without replacing the symlink. | Validated in Phase 05 |
 
 ## Evolution
 
@@ -101,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-19 after Phase 04 completion*
+*Last updated: 2026-05-20 after Phase 05 completion*

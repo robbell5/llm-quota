@@ -13,29 +13,41 @@ Each available row shows percent used, a colored progress bar, and the reset cou
 
 ## Install
 
-Install the command with Go:
+Choose one install path.
+
+To install `llm-quota` on your `PATH`, run:
 
 ```sh
 go install github.com/rob/llm-quota/cmd/llm-quota@latest
+llm-quota install-claude-hook
+llm-quota
 ```
 
-For a local repository smoke check without changing a wider shell setup, build the command from the repo root:
+For a local repository smoke check without changing a wider shell setup, build and run the local binary from the repo root:
 
 ```sh
 go build ./cmd/llm-quota
+./llm-quota install-claude-hook
+./llm-quota
 ```
 
-That writes a local `llm-quota` binary in the current directory.
+`go build ./cmd/llm-quota` writes a local `llm-quota` binary in the current directory. If you remove that file or run from another directory, run `go build ./cmd/llm-quota` again before using `./llm-quota`.
 
 ## Set up Claude quota data
 
-After installing, run the explicit Claude setup command:
+If you installed with `go install`, the explicit Claude setup command is:
 
 ```sh
 llm-quota install-claude-hook
 ```
 
-The command installs or updates only the app-owned Claude hook/cache writer. It preserves unrelated Claude configuration and writes a backup path when it changes the Claude settings file.
+If you built the local binary, the explicit Claude setup command is:
+
+```sh
+./llm-quota install-claude-hook
+```
+
+The command installs or updates only the app-owned Claude statusline cache writer. It preserves unrelated Claude configuration, wraps any existing statusline command, preserves a symlinked `~/.claude/settings.json` by writing through to its target, and writes a backup path when it changes the Claude settings file. The cache writer is registered as the `statusLine.command` in `~/.claude/settings.json`; v1 does not create a separate hook script file.
 
 After Claude runs, the hook writes local quota data to:
 
@@ -43,7 +55,7 @@ After Claude runs, the hook writes local quota data to:
 ~/.cache/llm-quota/claude.json
 ```
 
-Normal `llm-quota` launches may also offer to install this app-owned hook on first run, but the documented setup path is the explicit command above.
+Normal `llm-quota` launches may also offer to install this app-owned cache writer on first run, but the documented setup path is the explicit command above.
 
 ## Run in a tmux pane
 
@@ -52,6 +64,8 @@ Start the always-running TUI in a dedicated pane:
 ```sh
 llm-quota
 ```
+
+For the local build path, run `./llm-quota` from the repository root instead.
 
 The display is designed for a small pane around 50 columns and degrades for narrower panes. It refreshes quota data every 30 seconds while it remains in the foreground.
 
@@ -76,6 +90,8 @@ If the footer shows `Claude: run install-claude-hook`, run:
 ```sh
 llm-quota install-claude-hook
 ```
+
+For the local build path, run `./llm-quota install-claude-hook` from the repository root.
 
 Then open Claude so the app-owned hook can write `~/.cache/llm-quota/claude.json`.
 

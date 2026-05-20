@@ -44,6 +44,8 @@ func run(args []string, streams appStreams, deps appDeps) int {
 		switch args[0] {
 		case "claude-hook-cache-writer":
 			return runClaudeHookCacheWriter(args[1:], streams)
+		case "claude-statusline-cache-writer":
+			return runClaudeStatusLineCacheWriter(args[1:], streams)
 		case "install-claude-hook":
 			if len(args) > 1 {
 				fmt.Fprintf(streams.Stderr, "llm-quota: unknown argument: %s\n", args[1])
@@ -87,6 +89,30 @@ func runInstallClaudeHook(streams appStreams, deps appDeps) int {
 	fmt.Fprintln(streams.Stdout, result.Message)
 	if result.BackupPath != "" {
 		fmt.Fprintf(streams.Stdout, "backup: %s\n", result.BackupPath)
+	}
+	return 0
+}
+
+func runClaudeStatusLineCacheWriter(args []string, streams appStreams) int {
+	if len(args) != 2 && len(args) != 4 {
+		fmt.Fprintln(streams.Stderr, "llm-quota: usage: claude-statusline-cache-writer --cache <path> [--passthrough <command>]")
+		return 2
+	}
+	if args[0] != "--cache" || args[1] == "" {
+		fmt.Fprintln(streams.Stderr, "llm-quota: usage: claude-statusline-cache-writer --cache <path> [--passthrough <command>]")
+		return 2
+	}
+	passthrough := ""
+	if len(args) == 4 {
+		if args[2] != "--passthrough" || args[3] == "" {
+			fmt.Fprintln(streams.Stderr, "llm-quota: usage: claude-statusline-cache-writer --cache <path> [--passthrough <command>]")
+			return 2
+		}
+		passthrough = args[3]
+	}
+	if err := install.RunClaudeStatusLineCacheWriter(streams.Stdin, streams.Stdout, streams.Stderr, args[1], passthrough, time.Now()); err != nil {
+		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
+		return 1
 	}
 	return 0
 }
@@ -210,10 +236,17 @@ func sourceBackedModel(deps appDeps) (tui.Model, error) {
 	if err != nil {
 		return tui.Model{}, err
 	}
+	claudeHookInstalled, err := deps.ClaudeHookInstalled(paths)
+	if err != nil {
+		claudeHookInstalled = false
+	}
 
 	claudeReader := sources.NewClaudeReader(paths.CachePath)
 	codexReader := sources.NewCodexReader(codexSessionsRoot)
-	return tui.NewModel(tui.WithReaders(claudeReader, codexReader)), nil
+	return tui.NewModel(
+		tui.WithReaders(claudeReader, codexReader),
+		tui.WithClaudeHookInstalled(claudeHookInstalled),
+	), nil
 }
 
 func defaultCodexSessionsRoot() (string, error) {
@@ -257,6 +290,9 @@ func claudeHookInstalled(paths install.ClaudeHookPaths) (bool, error) {
 	if err := json.Unmarshal(contents, &config); err != nil {
 		return false, err
 	}
+	if isCurrentManagedClaudeStatusLine(config, paths.ExecutablePath, paths.CachePath) {
+		return true, nil
+	}
 	hooks, ok := config["hooks"].(map[string]any)
 	if !ok {
 		return false, nil
@@ -275,6 +311,22 @@ func claudeHookInstalled(paths install.ClaudeHookPaths) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func isCurrentManagedClaudeStatusLine(config map[string]any, executablePath string, cachePath string) bool {
+	statusLine, ok := config["statusLine"].(map[string]any)
+	if !ok {
+		return false
+	}
+	if statusLine["llm_quota_marker"] != "llm-quota" {
+		return false
+	}
+	passthrough, _ := statusLine["llm_quota_passthrough"].(string)
+	command, ok := statusLine["command"].(string)
+	if !ok {
+		return false
+	}
+	return command == install.ManagedStatusLineCommand(executablePath, cachePath, passthrough)
 }
 
 func isCurrentManagedClaudeHook(hook map[string]any, executablePath string, cachePath string) bool {

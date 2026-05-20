@@ -124,6 +124,21 @@ func TestRenderMissingAndStaleFooterHints(t *testing.T) {
 	if !strings.Contains(plain, "Claude: run install-claude-hook") {
 		t.Fatalf("expected Claude setup hint for missing Claude data, got:\n%s", plain)
 	}
+
+	installedButMissing := NewModel(
+		WithClock(func() time.Time { return now }),
+		WithClaudeHookInstalled(true),
+	)
+	installedButMissing.width = 80
+	installedButMissing.height = 12
+	installedButMissing.errors[sources.ProductClaude] = sources.SourceError{Source: sources.ProductClaude, Category: sources.ErrorMissing}
+	plain = ansiEscapeRE.ReplaceAllString(render(installedButMissing), "")
+	if !strings.Contains(plain, "Claude: open Claude") {
+		t.Fatalf("expected open-Claude hint when hook is installed but cache is missing, got:\n%s", plain)
+	}
+	if strings.Contains(plain, "Claude: run install-claude-hook") {
+		t.Fatalf("installed hook should not render setup hint for missing cache, got:\n%s", plain)
+	}
 	for _, forbidden := range []string{"malformed", "read_error", "no_usable_event"} {
 		if strings.Contains(strings.ToLower(plain), forbidden) {
 			t.Fatalf("render output should not expose raw error category %q:\n%s", forbidden, plain)

@@ -255,7 +255,7 @@ func footerRecoveryHints(m Model) []string {
 
 	if !hasWindows(m, sources.ProductClaude) {
 		if err, ok := m.errors[sources.ProductClaude]; ok {
-			if err.Category == sources.ErrorMissing {
+			if err.Category == sources.ErrorMissing && !m.claudeHookInstalled {
 				hints = append(hints, claudeInstallHint)
 			} else {
 				hints = append(hints, claudeOpenHint)

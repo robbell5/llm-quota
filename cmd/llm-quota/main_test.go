@@ -240,6 +240,71 @@ func TestClaudeHookInstalledMatchesQuotedCachePath(t *testing.T) {
 	}
 }
 
+func TestClaudeHookInstalledMatchesManagedStatusLine(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	cachePath := filepath.Join(tempDir, "claude.json")
+	executablePath := filepath.Join(tempDir, "llm-quota")
+	config, err := json.Marshal(map[string]any{
+		"statusLine": map[string]any{
+			"type":                  "command",
+			"command":               install.ManagedStatusLineCommand(executablePath, cachePath, "statusline.sh"),
+			"llm_quota_marker":      "llm-quota",
+			"llm_quota_passthrough": "statusline.sh",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(configPath, config, 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	installed, err := claudeHookInstalled(install.ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		CachePath:        cachePath,
+		ExecutablePath:   executablePath,
+	})
+	if err != nil {
+		t.Fatalf("claudeHookInstalled returned error: %v", err)
+	}
+	if !installed {
+		t.Fatalf("managed statusline should count as installed")
+	}
+}
+
+func TestClaudeHookInstalledRejectsWrongStatusLineCachePath(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	executablePath := filepath.Join(tempDir, "llm-quota")
+	config, err := json.Marshal(map[string]any{
+		"statusLine": map[string]any{
+			"type":                  "command",
+			"command":               install.ManagedStatusLineCommand(executablePath, filepath.Join(tempDir, "old.json"), "statusline.sh"),
+			"llm_quota_marker":      "llm-quota",
+			"llm_quota_passthrough": "statusline.sh",
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal config: %v", err)
+	}
+	if err := os.WriteFile(configPath, config, 0o600); err != nil {
+		t.Fatalf("write config: %v", err)
+	}
+
+	installed, err := claudeHookInstalled(install.ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		CachePath:        filepath.Join(tempDir, "claude.json"),
+		ExecutablePath:   executablePath,
+	})
+	if err != nil {
+		t.Fatalf("claudeHookInstalled returned error: %v", err)
+	}
+	if installed {
+		t.Fatalf("managed statusline with wrong cache path should not count as installed")
+	}
+}
+
 func TestRunUnknownArgumentPreservesErrorAndExitCode(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 
@@ -400,6 +465,9 @@ func TestRunNoArgStartupConstructsSourceBackedModelWithoutStartingRealTUI(t *tes
 	}
 	if !strings.Contains(modelDebug, codexSessions) {
 		t.Fatalf("expected Codex sessions path %q in model readers, got %q", codexSessions, modelDebug)
+	}
+	if !strings.Contains(modelDebug, "claudeHookInstalled:true") {
+		t.Fatalf("expected source-backed model to remember installed Claude hook, got %q", modelDebug)
 	}
 }
 

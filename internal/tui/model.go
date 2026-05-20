@@ -14,14 +14,15 @@ type Model struct {
 	width  int
 	height int
 
-	claudeReader SourceReader
-	codexReader  SourceReader
-	now          func() time.Time
-	refreshEvery time.Duration
-	staleAfter   time.Duration
-	refreshing   bool
-	windows      map[sources.Product][]sources.Window
-	errors       map[sources.Product]sources.SourceError
+	claudeReader        SourceReader
+	codexReader         SourceReader
+	now                 func() time.Time
+	refreshEvery        time.Duration
+	staleAfter          time.Duration
+	refreshing          bool
+	windows             map[sources.Product][]sources.Window
+	errors              map[sources.Product]sources.SourceError
+	claudeHookInstalled bool
 }
 
 type Option func(*Model)
@@ -77,5 +78,11 @@ func WithClock(now func() time.Time) Option {
 func WithRefreshEvery(interval time.Duration) Option {
 	return func(m *Model) {
 		m.refreshEvery = interval
+	}
+}
+
+func WithClaudeHookInstalled(installed bool) Option {
+	return func(m *Model) {
+		m.claudeHookInstalled = installed
 	}
 }

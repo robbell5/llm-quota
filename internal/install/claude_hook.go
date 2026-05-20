@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"strings"
@@ -46,9 +47,10 @@ func InstallClaudeHook(paths ClaudeHookPaths) (InstallResult, error) {
 	}
 	original := cloneJSONMap(config)
 
-	if err := installManagedHook(config, paths.ExecutablePath, paths.CachePath); err != nil {
+	if err := installManagedStatusLine(config, paths.ExecutablePath, paths.CachePath); err != nil {
 		return InstallResult{}, err
 	}
+	removeManagedToolHook(config)
 	if reflect.DeepEqual(original, config) {
 		return InstallResult{Message: "llm-quota Claude hook already installed"}, nil
 	}
@@ -166,6 +168,46 @@ func installManagedHook(config map[string]any, executablePath string, cachePath 
 	return nil
 }
 
+func installManagedStatusLine(config map[string]any, executablePath string, cachePath string) error {
+	statusLine, _ := config["statusLine"].(map[string]any)
+	passthrough := ""
+	if statusLine != nil {
+		if statusLine["llm_quota_marker"] == managedHookMarker {
+			passthrough, _ = statusLine["llm_quota_passthrough"].(string)
+		} else {
+			passthrough, _ = statusLine["command"].(string)
+		}
+	}
+
+	config["statusLine"] = map[string]any{
+		"type":                  "command",
+		"command":               ManagedStatusLineCommand(executablePath, cachePath, passthrough),
+		"llm_quota_marker":      managedHookMarker,
+		"llm_quota_passthrough": passthrough,
+	}
+	return nil
+}
+
+func removeManagedToolHook(config map[string]any) {
+	hooks, ok := config["hooks"].(map[string]any)
+	if !ok {
+		return
+	}
+	entries, ok := hooks[claudeHookEvent].([]any)
+	if !ok {
+		return
+	}
+	kept := entries[:0]
+	for _, entry := range entries {
+		hook, ok := entry.(map[string]any)
+		if ok && isManagedHook(hook) {
+			continue
+		}
+		kept = append(kept, entry)
+	}
+	hooks[claudeHookEvent] = kept
+}
+
 func hooksObject(config map[string]any) (map[string]any, error) {
 	raw, ok := config["hooks"]
 	if !ok || raw == nil {
@@ -219,13 +261,51 @@ func ManagedHookCommand(executablePath string, cachePath string) string {
 	return shellQuote(executablePath) + " claude-hook-cache-writer --cache " + shellQuote(cachePath)
 }
 
+func ManagedStatusLineCommand(executablePath string, cachePath string, passthrough string) string {
+	if executablePath == "" {
+		executablePath = managedHookName
+	}
+	command := shellQuote(executablePath) + " claude-statusline-cache-writer --cache " + shellQuote(cachePath)
+	if passthrough != "" {
+		command += " --passthrough " + shellQuote(passthrough)
+	}
+	return command
+}
+
 func RunClaudeHookCacheWriter(input io.Reader, cachePath string, now time.Time) error {
+	contents, err := io.ReadAll(input)
+	if err != nil {
+		return err
+	}
+	return writeClaudeCache(contents, cachePath, now, true)
+}
+
+func RunClaudeStatusLineCacheWriter(input io.Reader, stdout io.Writer, stderr io.Writer, cachePath string, passthrough string, now time.Time) error {
+	contents, err := io.ReadAll(input)
+	if err != nil {
+		return err
+	}
+	if err := writeClaudeCache(contents, cachePath, now, false); err != nil {
+		return err
+	}
+	if passthrough == "" {
+		return nil
+	}
+
+	command := exec.Command("sh", "-c", passthrough)
+	command.Stdin = bytes.NewReader(contents)
+	command.Stdout = stdout
+	command.Stderr = stderr
+	return command.Run()
+}
+
+func writeClaudeCache(contents []byte, cachePath string, now time.Time, requireRateLimits bool) error {
 	if cachePath == "" {
 		return errors.New("cache path is required")
 	}
 
 	var payload claudeHookPayload
-	decoder := json.NewDecoder(input)
+	decoder := json.NewDecoder(bytes.NewReader(contents))
 	if err := decoder.Decode(&payload); err != nil {
 		return fmt.Errorf("decode Claude hook input: %w", err)
 	}
@@ -242,6 +322,9 @@ func RunClaudeHookCacheWriter(input io.Reader, cachePath string, now time.Time) 
 		rateLimits = payload.Payload.RateLimits
 	}
 	if rateLimits == nil {
+		if !requireRateLimits {
+			return nil
+		}
 		return errors.New("missing rate_limits")
 	}
 	if err := rateLimits.validate(); err != nil {
@@ -335,7 +418,11 @@ func backupFile(path string) (string, error) {
 }
 
 func writeJSONAtomic(path string, value any) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+	writePath, err := resolveWritePath(path)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(writePath), 0o700); err != nil {
 		return err
 	}
 
@@ -345,7 +432,7 @@ func writeJSONAtomic(path string, value any) error {
 	}
 	contents = append(contents, '\n')
 
-	tempFile, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*.tmp")
+	tempFile, err := os.CreateTemp(filepath.Dir(writePath), "."+filepath.Base(writePath)+".*.tmp")
 	if err != nil {
 		return err
 	}
@@ -360,7 +447,29 @@ func writeJSONAtomic(path string, value any) error {
 		return err
 	}
 
-	return os.Rename(tempPath, path)
+	return os.Rename(tempPath, writePath)
+}
+
+func resolveWritePath(path string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return path, nil
+		}
+		return "", err
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		return path, nil
+	}
+
+	target, err := os.Readlink(path)
+	if err != nil {
+		return "", err
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(path), target)
+	}
+	return target, nil
 }
 
 func cloneJSONMap(value map[string]any) map[string]any {

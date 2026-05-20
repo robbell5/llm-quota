@@ -51,18 +51,11 @@ func TestInstallClaudeHookPreservesUnrelatedHooksAndCreatesBackupOnlyOnChange(t 
 
 	updated := readJSONMap(t, configPath)
 	postToolUse := hookEntries(t, updated, "PostToolUse")
-	if len(postToolUse) != 2 {
-		t.Fatalf("expected unrelated hook plus llm-quota hook, got %#v", postToolUse)
+	if len(postToolUse) != 1 {
+		t.Fatalf("expected unrelated hook to remain, got %#v", postToolUse)
 	}
 	assertContainsHook(t, postToolUse, unrelatedHook)
-	managed := findManagedHook(t, postToolUse)
-	if managed["name"] != "llm-quota" {
-		t.Fatalf("managed hook name = %#v, want llm-quota", managed["name"])
-	}
-	if managed["llm_quota_marker"] != "llm-quota" {
-		t.Fatalf("managed hook marker = %#v, want llm-quota", managed["llm_quota_marker"])
-	}
-	assertManagedCommandHookShape(t, managed, cachePath)
+	assertManagedStatusLineShape(t, updated, cachePath, "")
 
 	second, err := InstallClaudeHook(ClaudeHookPaths{
 		ClaudeConfigPath: configPath,
@@ -115,12 +108,10 @@ func TestInstallClaudeHookUpdatesOnlyExplicitlyManagedLLMQuotaEntry(t *testing.T
 	}
 
 	postToolUse := hookEntries(t, readJSONMap(t, configPath), "PostToolUse")
-	if len(postToolUse) != 2 {
-		t.Fatalf("expected unowned entry and updated managed entry, got %#v", postToolUse)
+	if len(postToolUse) != 1 {
+		t.Fatalf("expected only unowned entry after removing managed tool hook, got %#v", postToolUse)
 	}
 	assertContainsHook(t, postToolUse, looksSimilarButUnowned)
-	managed := findManagedHook(t, postToolUse)
-	assertManagedCommandHookShape(t, managed, cachePath)
 }
 
 func TestInstallClaudeHookPreservesMarkerlessLLMQuotaNamedHook(t *testing.T) {
@@ -157,12 +148,10 @@ func TestInstallClaudeHookPreservesMarkerlessLLMQuotaNamedHook(t *testing.T) {
 	}
 
 	postToolUse := hookEntries(t, readJSONMap(t, configPath), "PostToolUse")
-	if len(postToolUse) != 2 {
-		t.Fatalf("expected markerless hook plus managed hook, got %#v", postToolUse)
+	if len(postToolUse) != 1 {
+		t.Fatalf("expected markerless hook to remain without managed tool hook, got %#v", postToolUse)
 	}
 	assertContainsHook(t, postToolUse, markerlessHook)
-	managed := findManagedHook(t, postToolUse)
-	assertManagedCommandHookShape(t, managed, cachePath)
 }
 
 func TestInstallClaudeHookUsesConfiguredExecutablePath(t *testing.T) {
@@ -180,10 +169,143 @@ func TestInstallClaudeHookUsesConfiguredExecutablePath(t *testing.T) {
 		t.Fatalf("InstallClaudeHook returned error: %v", err)
 	}
 
-	managed := findManagedHook(t, hookEntries(t, readJSONMap(t, configPath), "PostToolUse"))
-	command := managedCommand(t, managed)
+	statusLine := assertManagedStatusLineShape(t, readJSONMap(t, configPath), cachePath, "")
+	command, _ := statusLine["command"].(string)
 	if !strings.HasPrefix(command, shellQuote(executablePath)+" ") {
-		t.Fatalf("nested hook command = %q, want executable path prefix %q", command, shellQuote(executablePath))
+		t.Fatalf("statusLine command = %q, want executable path prefix %q", command, shellQuote(executablePath))
+	}
+}
+
+func TestInstallClaudeHookPreservesSymlinkedConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	dotfilesDir := filepath.Join(tempDir, "dotfiles")
+	if err := os.MkdirAll(dotfilesDir, 0o700); err != nil {
+		t.Fatalf("create dotfiles dir: %v", err)
+	}
+	realConfigPath := filepath.Join(dotfilesDir, "settings.json")
+	writeJSON(t, realConfigPath, map[string]any{"theme": "dark"})
+
+	configPath := filepath.Join(tempDir, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
+		t.Fatalf("create config dir: %v", err)
+	}
+	if err := os.Symlink(realConfigPath, configPath); err != nil {
+		t.Fatalf("create settings symlink: %v", err)
+	}
+
+	result, err := InstallClaudeHook(ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		StatePath:        filepath.Join(tempDir, "state.json"),
+		CachePath:        filepath.Join(tempDir, "claude.json"),
+	})
+	if err != nil {
+		t.Fatalf("InstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected symlinked config install to report changed")
+	}
+
+	info, err := os.Lstat(configPath)
+	if err != nil {
+		t.Fatalf("lstat config symlink: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("config path mode = %v, want symlink preserved", info.Mode())
+	}
+	linkTarget, err := os.Readlink(configPath)
+	if err != nil {
+		t.Fatalf("read config symlink: %v", err)
+	}
+	if linkTarget != realConfigPath {
+		t.Fatalf("config symlink target = %q, want %q", linkTarget, realConfigPath)
+	}
+
+	assertManagedStatusLineShape(t, readJSONMap(t, realConfigPath), filepath.Join(tempDir, "claude.json"), "")
+}
+
+func TestInstallClaudeHookWrapsExistingStatusLineAndRemovesManagedToolHook(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	cachePath := filepath.Join(tempDir, "claude.json")
+	executablePath := filepath.Join(tempDir, "llm-quota")
+	existingStatusLine := filepath.Join(tempDir, "statusline.sh")
+
+	writeJSON(t, configPath, map[string]any{
+		"statusLine": map[string]any{
+			"type":    "command",
+			"command": existingStatusLine,
+		},
+		"hooks": map[string]any{
+			"PostToolUse": []any{
+				map[string]any{
+					"name":             "llm-quota",
+					"llm_quota_marker": "llm-quota",
+					"matcher":          "*",
+					"hooks": []any{
+						map[string]any{"type": "command", "command": "old broken hook"},
+					},
+				},
+				map[string]any{"name": "user-hook", "matcher": "Read"},
+			},
+		},
+	})
+
+	if _, err := InstallClaudeHook(ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		StatePath:        filepath.Join(tempDir, "state.json"),
+		CachePath:        cachePath,
+		ExecutablePath:   executablePath,
+	}); err != nil {
+		t.Fatalf("InstallClaudeHook returned error: %v", err)
+	}
+
+	updated := readJSONMap(t, configPath)
+	statusLine, ok := updated["statusLine"].(map[string]any)
+	if !ok {
+		t.Fatalf("statusLine missing or wrong type: %#v", updated["statusLine"])
+	}
+	command, ok := statusLine["command"].(string)
+	if !ok {
+		t.Fatalf("statusLine command missing or wrong type: %#v", statusLine["command"])
+	}
+	for _, want := range []string{shellQuote(executablePath), "claude-statusline-cache-writer --cache", shellQuote(cachePath), "--passthrough", shellQuote(existingStatusLine)} {
+		if !strings.Contains(command, want) {
+			t.Fatalf("statusLine command = %q, want to contain %q", command, want)
+		}
+	}
+
+	postToolUse := hookEntries(t, updated, "PostToolUse")
+	if len(postToolUse) != 1 {
+		t.Fatalf("expected only unrelated PostToolUse hook to remain, got %#v", postToolUse)
+	}
+	assertContainsHook(t, postToolUse, map[string]any{"name": "user-hook", "matcher": "Read"})
+}
+
+func TestRunClaudeStatusLineCacheWriterWritesCacheAndPassesThrough(t *testing.T) {
+	tempDir := t.TempDir()
+	cachePath := filepath.Join(tempDir, "claude.json")
+	passthroughPath := filepath.Join(tempDir, "statusline.sh")
+	if err := os.WriteFile(passthroughPath, []byte("#!/bin/sh\ncat >/dev/null\nprintf 'original statusline'\n"), 0o700); err != nil {
+		t.Fatalf("write passthrough script: %v", err)
+	}
+	input := strings.NewReader(`{"rate_limits":{"five_hour":{"used_percentage":42.3,"resets_at":1778942485},"seven_day":{"used_percentage":85.7,"resets_at":1779382265}}}`)
+	var stdout, stderr strings.Builder
+
+	if err := RunClaudeStatusLineCacheWriter(input, &stdout, &stderr, cachePath, passthroughPath, time.Unix(1778930000, 0)); err != nil {
+		t.Fatalf("RunClaudeStatusLineCacheWriter returned error: %v", err)
+	}
+	if stdout.String() != "original statusline" {
+		t.Fatalf("stdout = %q, want passthrough output", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	windows, err := sources.NewClaudeReader(cachePath).Fetch(time.Unix(1778930000, 0))
+	if err != nil {
+		t.Fatalf("ClaudeReader could not read generated statusline cache: %v", err)
+	}
+	if len(windows) != 2 {
+		t.Fatalf("ClaudeReader returned %d windows, want 2: %#v", len(windows), windows)
 	}
 }
 
@@ -405,6 +527,38 @@ func assertManagedCommandHookShape(t *testing.T, managed map[string]any, cachePa
 	if !strings.Contains(command, shellQuote(cachePath)) {
 		t.Fatalf("nested hook command = %q, want shell-quoted cache path %q", command, shellQuote(cachePath))
 	}
+}
+
+func assertManagedStatusLineShape(t *testing.T, config map[string]any, cachePath string, passthrough string) map[string]any {
+	t.Helper()
+
+	statusLine, ok := config["statusLine"].(map[string]any)
+	if !ok {
+		t.Fatalf("statusLine missing or wrong type: %#v", config["statusLine"])
+	}
+	if statusLine["type"] != "command" {
+		t.Fatalf("statusLine type = %#v, want command", statusLine["type"])
+	}
+	if statusLine["llm_quota_marker"] != "llm-quota" {
+		t.Fatalf("statusLine marker = %#v, want llm-quota", statusLine["llm_quota_marker"])
+	}
+	if statusLine["llm_quota_passthrough"] != passthrough {
+		t.Fatalf("statusLine passthrough = %#v, want %q", statusLine["llm_quota_passthrough"], passthrough)
+	}
+	command, ok := statusLine["command"].(string)
+	if !ok || command == "" {
+		t.Fatalf("statusLine command = %#v, want non-empty command", statusLine["command"])
+	}
+	if !strings.Contains(command, "claude-statusline-cache-writer --cache") {
+		t.Fatalf("statusLine command = %q, want claude-statusline-cache-writer --cache", command)
+	}
+	if !strings.Contains(command, shellQuote(cachePath)) {
+		t.Fatalf("statusLine command = %q, want shell-quoted cache path %q", command, shellQuote(cachePath))
+	}
+	if passthrough != "" && !strings.Contains(command, shellQuote(passthrough)) {
+		t.Fatalf("statusLine command = %q, want shell-quoted passthrough %q", command, shellQuote(passthrough))
+	}
+	return statusLine
 }
 
 func managedCommand(t *testing.T, managed map[string]any) string {

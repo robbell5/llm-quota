@@ -144,7 +144,16 @@ Plans:
   3. User can troubleshoot missing Claude or Codex data using the same placeholder hints shown in the TUI.
   4. User can run the finished app in a dedicated tmux pane and confirm the default cadence, quit keys, and responsive layout feel usable.
 
-**Plans**: TBD
+**Plans**: 2 plans
+Plans:
+**Wave 1**
+
+- [ ] 05-01-PLAN.md — Create README install, setup, run, and troubleshooting documentation.
+
+**Wave 2** *(blocked on Wave 1 README completion)*
+
+- [ ] 05-02-PLAN.md — Record final real tmux-pane validation for install/setup, cadence, keys, responsive widths, and colors.
+
 **UI hint**: yes
 
 ## Progress

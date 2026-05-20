@@ -148,7 +148,7 @@ Plans:
 Plans:
 **Wave 1**
 
-- [ ] 05-01-PLAN.md — Create README install, setup, run, and troubleshooting documentation.
+- [x] 05-01-PLAN.md — Create README install, setup, run, and troubleshooting documentation.
 
 **Wave 2** *(blocked on Wave 1 README completion)*
 
@@ -167,4 +167,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Standalone Local Data Sources | 5/5 | Complete   | 2026-05-18 |
 | 3. Refresh and Resilience Loop | 2/2 | Complete   | 2026-05-19 |
 | 4. Quota Display and Responsive Rendering | 2/2 | Complete   | 2026-05-19 |
-| 5. Install, Docs, and Real-Pane Validation | 0/TBD | Not started | - |
+| 5. Install, Docs, and Real-Pane Validation | 1/2 | In Progress|  |

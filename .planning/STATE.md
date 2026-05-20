@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 5 context gathered
-last_updated: "2026-05-20T12:10:27.460Z"
-last_activity: 2026-05-20 -- Phase 05 planning complete
+last_updated: "2026-05-20T12:17:20.078Z"
+last_activity: 2026-05-20 -- Phase 05 execution started
 progress:
   total_phases: 5
   completed_phases: 4
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 80
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Rob can glance at one tmux pane and immediately know how close Claude Code and Codex are to their 5-hour and 7-day limits.
-**Current focus:** Phase 5 — install, docs, and real pane validation
+**Current focus:** Phase 05 — install-docs-and-real-pane-validation
 
 ## Current Position
 
-Phase: 5
-Plan: Not started
-Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 05 planning complete
+Phase: 05 (install-docs-and-real-pane-validation) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 05
+Last activity: 2026-05-20 -- Phase 05 execution started
 
 Progress: [██████████] 100%
 
@@ -121,6 +121,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-20T12:01:56.090Z
+Last session: 2026-05-20T12:17:20.073Z
 Stopped at: Phase 5 context gathered
-Resume file: .planning/phases/05-install-docs-and-real-pane-validation/05-CONTEXT.md
+Resume file: None

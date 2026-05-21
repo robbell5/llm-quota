@@ -15,9 +15,10 @@ import (
 )
 
 const (
-	managedHookName   = "llm-quota"
-	managedHookMarker = "llm-quota"
-	claudeHookEvent   = "PostToolUse"
+	managedHookName              = "llm-quota"
+	managedHookMarker            = "llm-quota"
+	managedStatusLineOriginalKey = "llm_quota_original_statusLine"
+	claudeHookEvent              = "PostToolUse"
 )
 
 type ClaudeHookPaths struct {
@@ -89,7 +90,9 @@ func UninstallClaudeHook(paths ClaudeHookPaths) (InstallResult, error) {
 
 	if statusLine, ok := config["statusLine"].(map[string]any); ok && statusLine["llm_quota_marker"] == managedHookMarker {
 		passthrough, _ := statusLine["llm_quota_passthrough"].(string)
-		if passthrough != "" {
+		if originalStatusLine, ok := statusLine[managedStatusLineOriginalKey].(map[string]any); ok {
+			config["statusLine"] = cloneJSONMap(originalStatusLine)
+		} else if passthrough != "" {
 			config["statusLine"] = map[string]any{
 				"type":    "command",
 				"command": passthrough,
@@ -217,20 +220,27 @@ func installManagedHook(config map[string]any, executablePath string, cachePath 
 func installManagedStatusLine(config map[string]any, executablePath string, cachePath string) error {
 	statusLine, _ := config["statusLine"].(map[string]any)
 	passthrough := ""
+	var originalStatusLine map[string]any
 	if statusLine != nil {
 		if statusLine["llm_quota_marker"] == managedHookMarker {
 			passthrough, _ = statusLine["llm_quota_passthrough"].(string)
+			originalStatusLine, _ = statusLine[managedStatusLineOriginalKey].(map[string]any)
 		} else {
 			passthrough, _ = statusLine["command"].(string)
+			originalStatusLine = cloneJSONMap(statusLine)
 		}
 	}
 
-	config["statusLine"] = map[string]any{
+	managedStatusLine := map[string]any{
 		"type":                  "command",
 		"command":               ManagedStatusLineCommand(executablePath, cachePath, passthrough),
 		"llm_quota_marker":      managedHookMarker,
 		"llm_quota_passthrough": passthrough,
 	}
+	if originalStatusLine != nil {
+		managedStatusLine[managedStatusLineOriginalKey] = originalStatusLine
+	}
+	config["statusLine"] = managedStatusLine
 	return nil
 }
 
@@ -331,11 +341,9 @@ func RunClaudeStatusLineCacheWriter(input io.Reader, stdout io.Writer, stderr io
 	if err != nil {
 		return err
 	}
-	if err := writeClaudeCache(contents, cachePath, now, false); err != nil {
-		return err
-	}
+	cacheErr := writeClaudeCache(contents, cachePath, now, false)
 	if passthrough == "" {
-		return nil
+		return cacheErr
 	}
 
 	command := exec.Command("sh", "-c", passthrough)

@@ -328,6 +328,41 @@ func TestUninstallClaudeHookRestoresWrappedStatusLine(t *testing.T) {
 	}
 }
 
+func TestUninstallClaudeHookRestoresFullOriginalStatusLine(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	originalStatusLine := map[string]any{
+		"type":    "command",
+		"command": filepath.Join(tempDir, "statusline.sh"),
+		"padding": true,
+		"theme":   "compact",
+	}
+	writeJSON(t, configPath, map[string]any{
+		"statusLine": originalStatusLine,
+	})
+
+	if _, err := InstallClaudeHook(ClaudeHookPaths{
+		ClaudeConfigPath: configPath,
+		CachePath:        filepath.Join(tempDir, "claude.json"),
+		ExecutablePath:   filepath.Join(tempDir, "llm-quota"),
+	}); err != nil {
+		t.Fatalf("InstallClaudeHook returned error: %v", err)
+	}
+
+	result, err := UninstallClaudeHook(ClaudeHookPaths{ClaudeConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("UninstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected uninstall to restore original statusLine")
+	}
+
+	updated := readJSONMap(t, configPath)
+	if got := updated["statusLine"]; !reflect.DeepEqual(got, originalStatusLine) {
+		t.Fatalf("statusLine = %#v, want full original %#v", got, originalStatusLine)
+	}
+}
+
 func TestUninstallClaudeHookRemovesManagedStatusLineWithoutPassthrough(t *testing.T) {
 	tempDir := t.TempDir()
 	configPath := filepath.Join(tempDir, "settings.json")
@@ -484,6 +519,29 @@ func TestRunClaudeStatusLineCacheWriterWritesCacheAndPassesThrough(t *testing.T)
 	}
 	if len(windows) != 2 {
 		t.Fatalf("ClaudeReader returned %d windows, want 2: %#v", len(windows), windows)
+	}
+}
+
+func TestRunClaudeStatusLineCacheWriterRunsPassthroughWhenCacheInputIsInvalid(t *testing.T) {
+	tempDir := t.TempDir()
+	cachePath := filepath.Join(tempDir, "claude.json")
+	passthroughPath := filepath.Join(tempDir, "statusline.sh")
+	if err := os.WriteFile(passthroughPath, []byte("#!/bin/sh\ncat >/dev/null\nprintf 'original statusline'\n"), 0o700); err != nil {
+		t.Fatalf("write passthrough script: %v", err)
+	}
+	var stdout, stderr strings.Builder
+
+	if err := RunClaudeStatusLineCacheWriter(strings.NewReader(`not json`), &stdout, &stderr, cachePath, passthroughPath, time.Unix(1778930000, 0)); err != nil {
+		t.Fatalf("RunClaudeStatusLineCacheWriter returned error: %v", err)
+	}
+	if stdout.String() != "original statusline" {
+		t.Fatalf("stdout = %q, want passthrough output", stdout.String())
+	}
+	if stderr.Len() != 0 {
+		t.Fatalf("stderr = %q, want empty", stderr.String())
+	}
+	if _, err := os.Stat(cachePath); !os.IsNotExist(err) {
+		t.Fatalf("cache path stat error = %v, want not exist", err)
 	}
 }
 

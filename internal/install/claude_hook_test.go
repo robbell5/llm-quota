@@ -281,6 +281,184 @@ func TestInstallClaudeHookWrapsExistingStatusLineAndRemovesManagedToolHook(t *te
 	assertContainsHook(t, postToolUse, map[string]any{"name": "user-hook", "matcher": "Read"})
 }
 
+func TestUninstallClaudeHookRestoresWrappedStatusLine(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	statusLineCommand := filepath.Join(tempDir, "statusline.sh")
+	writeJSON(t, configPath, map[string]any{
+		"theme": "dark",
+		"statusLine": map[string]any{
+			"type":                  "command",
+			"command":               ManagedStatusLineCommand(filepath.Join(tempDir, "llm-quota"), filepath.Join(tempDir, "claude.json"), statusLineCommand),
+			"llm_quota_marker":      "llm-quota",
+			"llm_quota_passthrough": statusLineCommand,
+		},
+	})
+
+	result, err := UninstallClaudeHook(ClaudeHookPaths{ClaudeConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("UninstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected uninstall to change managed statusLine")
+	}
+	if result.BackupPath == "" {
+		t.Fatalf("expected backup path on changed uninstall")
+	}
+	if _, err := os.Stat(result.BackupPath); err != nil {
+		t.Fatalf("expected backup file to exist: %v", err)
+	}
+	if result.Message != "uninstalled llm-quota Claude hook" {
+		t.Fatalf("message = %q, want uninstall confirmation", result.Message)
+	}
+
+	updated := readJSONMap(t, configPath)
+	statusLine, ok := updated["statusLine"].(map[string]any)
+	if !ok {
+		t.Fatalf("statusLine missing or wrong type: %#v", updated["statusLine"])
+	}
+	if got, want := statusLine["type"], "command"; got != want {
+		t.Fatalf("statusLine type = %#v, want %q", got, want)
+	}
+	if got := statusLine["command"]; got != statusLineCommand {
+		t.Fatalf("statusLine command = %#v, want restored passthrough %q", got, statusLineCommand)
+	}
+	if _, ok := statusLine["llm_quota_marker"]; ok {
+		t.Fatalf("restored statusLine should not retain llm-quota marker: %#v", statusLine)
+	}
+}
+
+func TestUninstallClaudeHookRemovesManagedStatusLineWithoutPassthrough(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	writeJSON(t, configPath, map[string]any{
+		"statusLine": map[string]any{
+			"type":                  "command",
+			"command":               ManagedStatusLineCommand("", filepath.Join(tempDir, "claude.json"), ""),
+			"llm_quota_marker":      "llm-quota",
+			"llm_quota_passthrough": "",
+		},
+	})
+
+	result, err := UninstallClaudeHook(ClaudeHookPaths{ClaudeConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("UninstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected uninstall to remove managed statusLine")
+	}
+	updated := readJSONMap(t, configPath)
+	if _, ok := updated["statusLine"]; ok {
+		t.Fatalf("managed statusLine without passthrough should be removed, got %#v", updated["statusLine"])
+	}
+}
+
+func TestUninstallClaudeHookRemovesOldManagedToolHookAndPreservesUnrelatedHooks(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	unrelatedHook := map[string]any{"name": "user-hook", "matcher": "Read"}
+	writeJSON(t, configPath, map[string]any{
+		"hooks": map[string]any{
+			"PostToolUse": []any{
+				map[string]any{
+					"name":             "llm-quota",
+					"llm_quota_marker": "llm-quota",
+					"matcher":          "*",
+					"hooks": []any{
+						map[string]any{"type": "command", "command": "old managed hook"},
+					},
+				},
+				unrelatedHook,
+			},
+		},
+	})
+
+	result, err := UninstallClaudeHook(ClaudeHookPaths{ClaudeConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("UninstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected uninstall to remove old managed tool hook")
+	}
+	postToolUse := hookEntries(t, readJSONMap(t, configPath), "PostToolUse")
+	if len(postToolUse) != 1 {
+		t.Fatalf("expected only unrelated hook to remain, got %#v", postToolUse)
+	}
+	assertContainsHook(t, postToolUse, unrelatedHook)
+}
+
+func TestUninstallClaudeHookLeavesUnmanagedConfigUnchanged(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, "settings.json")
+	original := map[string]any{
+		"statusLine": map[string]any{"type": "command", "command": "statusline.sh"},
+		"hooks": map[string]any{
+			"PostToolUse": []any{map[string]any{"name": "llm-quota", "matcher": "*"}},
+		},
+	}
+	writeJSON(t, configPath, original)
+
+	result, err := UninstallClaudeHook(ClaudeHookPaths{ClaudeConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("UninstallClaudeHook returned error: %v", err)
+	}
+	if result.Changed {
+		t.Fatalf("expected unmanaged config to remain unchanged")
+	}
+	if result.BackupPath != "" {
+		t.Fatalf("expected no backup for unchanged uninstall, got %q", result.BackupPath)
+	}
+	if result.Message != "llm-quota Claude hook is not installed" {
+		t.Fatalf("message = %q, want not-installed message", result.Message)
+	}
+	if got := readJSONMap(t, configPath); !reflect.DeepEqual(got, original) {
+		t.Fatalf("config changed unexpectedly: got %#v want %#v", got, original)
+	}
+}
+
+func TestUninstallClaudeHookPreservesSymlinkedConfig(t *testing.T) {
+	tempDir := t.TempDir()
+	dotfilesDir := filepath.Join(tempDir, "dotfiles")
+	if err := os.MkdirAll(dotfilesDir, 0o700); err != nil {
+		t.Fatalf("create dotfiles dir: %v", err)
+	}
+	realConfigPath := filepath.Join(dotfilesDir, "settings.json")
+	writeJSON(t, realConfigPath, map[string]any{
+		"statusLine": map[string]any{
+			"type":                  "command",
+			"command":               ManagedStatusLineCommand("", filepath.Join(tempDir, "claude.json"), ""),
+			"llm_quota_marker":      "llm-quota",
+			"llm_quota_passthrough": "",
+		},
+	})
+
+	configPath := filepath.Join(tempDir, ".claude", "settings.json")
+	if err := os.MkdirAll(filepath.Dir(configPath), 0o700); err != nil {
+		t.Fatalf("create config dir: %v", err)
+	}
+	if err := os.Symlink(realConfigPath, configPath); err != nil {
+		t.Fatalf("create settings symlink: %v", err)
+	}
+
+	result, err := UninstallClaudeHook(ClaudeHookPaths{ClaudeConfigPath: configPath})
+	if err != nil {
+		t.Fatalf("UninstallClaudeHook returned error: %v", err)
+	}
+	if !result.Changed {
+		t.Fatalf("expected symlinked config uninstall to report changed")
+	}
+	info, err := os.Lstat(configPath)
+	if err != nil {
+		t.Fatalf("lstat config symlink: %v", err)
+	}
+	if info.Mode()&os.ModeSymlink == 0 {
+		t.Fatalf("config path mode = %v, want symlink preserved", info.Mode())
+	}
+	if _, ok := readJSONMap(t, realConfigPath)["statusLine"]; ok {
+		t.Fatalf("managed statusLine should be removed from symlink target")
+	}
+}
+
 func TestRunClaudeStatusLineCacheWriterWritesCacheAndPassesThrough(t *testing.T) {
 	tempDir := t.TempDir()
 	cachePath := filepath.Join(tempDir, "claude.json")

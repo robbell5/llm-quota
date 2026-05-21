@@ -57,6 +57,22 @@ After Claude runs, the hook writes local quota data to:
 
 Normal `llm-quota` launches may also offer to install this app-owned cache writer on first run, but the documented setup path is the explicit command above.
 
+### Uninstall Claude quota data setup
+
+If you installed with `go install`, remove the app-owned Claude quota capture setup with:
+
+```sh
+llm-quota uninstall-claude-hook
+```
+
+For the local build path, run:
+
+```sh
+./llm-quota uninstall-claude-hook
+```
+
+Uninstall removes the app-owned Claude statusline cache writer from `~/.claude/settings.json`, preserves unrelated Claude configuration, and restores the previously wrapped statusline command when one was present. It does not delete ~/.cache/llm-quota/claude.json or ~/.cache/llm-quota/state.json, so rerunning setup can re-enable quota capture without wiping local cache or state files.
+
 ## Run in a tmux pane
 
 Start the always-running TUI in a dedicated pane:
@@ -94,6 +110,8 @@ llm-quota install-claude-hook
 For the local build path, run `./llm-quota install-claude-hook` from the repository root.
 
 Then open Claude so the app-owned hook can write `~/.cache/llm-quota/claude.json`.
+
+If you previously ran `llm-quota uninstall-claude-hook`, rerunning `llm-quota install-claude-hook` re-enables Claude quota capture.
 
 If the footer shows `Claude: open Claude`, open Claude locally so it can produce newer local quota data.
 

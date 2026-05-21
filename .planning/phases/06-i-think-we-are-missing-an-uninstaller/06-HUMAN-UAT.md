@@ -1,7 +1,7 @@
 ---
 phase: 06-i-think-we-are-missing-an-uninstaller
-status: pending
-validated_at: null
+status: passed
+validated_at: 2026-05-21T19:40:36Z
 ---
 
 # Phase 06 Human UAT
@@ -14,28 +14,28 @@ Do not paste private Claude settings contents into this file. Record only comman
 
 ## Checklist
 
-- [ ] Build local binary with `go build ./cmd/llm-quota`.
-- [ ] Run `./llm-quota install-claude-hook`.
-- [ ] Confirm Claude settings contain an app-owned `llm_quota_marker`.
-- [ ] Run `./llm-quota uninstall-claude-hook`.
-- [ ] Confirm the app-owned marker is absent.
-- [ ] Confirm any previous statusline command is restored when present.
-- [ ] Confirm `~/.cache/llm-quota/claude.json is not deleted` by uninstall.
-- [ ] Rerun `./llm-quota install-claude-hook`.
-- [ ] Run `go test ./... -count=1`.
+- [x] Build local binary with `go build ./cmd/llm-quota`.
+- [x] Run `./llm-quota install-claude-hook`.
+- [x] Confirm Claude settings contain an app-owned `llm_quota_marker`.
+- [x] Run `./llm-quota uninstall-claude-hook`.
+- [x] Confirm the app-owned marker is absent.
+- [x] Confirm any previous statusline command is restored when present.
+- [x] Confirm `~/.cache/llm-quota/claude.json is not deleted` by uninstall.
+- [x] Rerun `./llm-quota install-claude-hook`.
+- [x] Run `go test ./... -count=1`.
 
 ## Results
 
-- **Status:** pending
-- **Validator:** pending
-- **Validated at:** pending
-- **Notes:** pending
+- **Status:** passed
+- **Validator:** Human checkpoint approved by Rob
+- **Validated at:** 2026-05-21T19:40:36Z
+- **Notes:** Real local install → uninstall → reinstall flow approved. No private Claude settings contents were recorded.
 
 ## Summary
 
 - total: 9
-- passed: 0
+- passed: 9
 - issues: 0
-- pending: 9
+- pending: 0
 - skipped: 0
 - blocked: 0

@@ -726,45 +726,6 @@ func assertContainsHook(t *testing.T, hooks []any, want map[string]any) {
 	t.Fatalf("expected hook %#v in %#v", want, hooks)
 }
 
-func assertManagedCommandHookShape(t *testing.T, managed map[string]any, cachePath string) {
-	t.Helper()
-
-	if managed["matcher"] != "*" {
-		t.Fatalf("managed hook matcher = %#v, want *", managed["matcher"])
-	}
-	if managed["name"] != "llm-quota" {
-		t.Fatalf("managed hook name = %#v, want llm-quota", managed["name"])
-	}
-	if managed["llm_quota_marker"] != "llm-quota" {
-		t.Fatalf("managed hook marker = %#v, want llm-quota", managed["llm_quota_marker"])
-	}
-	if _, ok := managed["command"]; ok {
-		t.Fatalf("managed hook has top-level command field: %#v", managed)
-	}
-
-	hooks, ok := managed["hooks"].([]any)
-	if !ok {
-		t.Fatalf("managed hook nested hooks missing or wrong type: %#v", managed["hooks"])
-	}
-	if len(hooks) != 1 {
-		t.Fatalf("managed hook nested hooks length = %d, want 1: %#v", len(hooks), hooks)
-	}
-	commandHook, ok := hooks[0].(map[string]any)
-	if !ok {
-		t.Fatalf("managed hook nested command hook wrong type: %#v", hooks[0])
-	}
-	if commandHook["type"] != "command" {
-		t.Fatalf("nested hook type = %#v, want command", commandHook["type"])
-	}
-	command := managedCommand(t, managed)
-	if !strings.Contains(command, "claude-hook-cache-writer --cache") {
-		t.Fatalf("nested hook command = %q, want claude-hook-cache-writer --cache", command)
-	}
-	if !strings.Contains(command, shellQuote(cachePath)) {
-		t.Fatalf("nested hook command = %q, want shell-quoted cache path %q", command, shellQuote(cachePath))
-	}
-}
-
 func assertManagedStatusLineShape(t *testing.T, config map[string]any, cachePath string, passthrough string) map[string]any {
 	t.Helper()
 
@@ -795,24 +756,6 @@ func assertManagedStatusLineShape(t *testing.T, config map[string]any, cachePath
 		t.Fatalf("statusLine command = %q, want shell-quoted passthrough %q", command, shellQuote(passthrough))
 	}
 	return statusLine
-}
-
-func managedCommand(t *testing.T, managed map[string]any) string {
-	t.Helper()
-
-	hooks, ok := managed["hooks"].([]any)
-	if !ok || len(hooks) != 1 {
-		t.Fatalf("managed hook nested hooks missing or wrong length: %#v", managed["hooks"])
-	}
-	commandHook, ok := hooks[0].(map[string]any)
-	if !ok {
-		t.Fatalf("managed hook nested command hook wrong type: %#v", hooks[0])
-	}
-	command, ok := commandHook["command"].(string)
-	if !ok || command == "" {
-		t.Fatalf("nested hook command = %#v, want non-empty command", commandHook["command"])
-	}
-	return command
 }
 
 func sortedKeys(value map[string]any) []string {

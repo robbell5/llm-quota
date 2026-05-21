@@ -189,34 +189,6 @@ func readClaudeConfig(path string) (map[string]any, bool, error) {
 	return config, true, nil
 }
 
-func installManagedHook(config map[string]any, executablePath string, cachePath string) error {
-	hooks, err := hooksObject(config)
-	if err != nil {
-		return err
-	}
-
-	entries, err := getHookEntries(hooks, claudeHookEvent)
-	if err != nil {
-		return err
-	}
-	managed := managedHook(executablePath, cachePath)
-
-	for index, entry := range entries {
-		hook, ok := entry.(map[string]any)
-		if !ok {
-			continue
-		}
-		if isManagedHook(hook) {
-			entries[index] = managed
-			hooks[claudeHookEvent] = entries
-			return nil
-		}
-	}
-
-	hooks[claudeHookEvent] = append(entries, managed)
-	return nil
-}
-
 func installManagedStatusLine(config map[string]any, executablePath string, cachePath string) error {
 	statusLine, _ := config["statusLine"].(map[string]any)
 	passthrough := ""
@@ -264,21 +236,6 @@ func removeManagedToolHook(config map[string]any) {
 	hooks[claudeHookEvent] = kept
 }
 
-func hooksObject(config map[string]any) (map[string]any, error) {
-	raw, ok := config["hooks"]
-	if !ok || raw == nil {
-		hooks := map[string]any{}
-		config["hooks"] = hooks
-		return hooks, nil
-	}
-
-	hooks, ok := raw.(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("unsupported Claude hooks shape %T", raw)
-	}
-	return hooks, nil
-}
-
 func getHookEntries(hooks map[string]any, event string) ([]any, error) {
 	raw, ok := hooks[event]
 	if !ok || raw == nil {
@@ -294,20 +251,6 @@ func getHookEntries(hooks map[string]any, event string) ([]any, error) {
 
 func isManagedHook(hook map[string]any) bool {
 	return hook["llm_quota_marker"] == managedHookMarker
-}
-
-func managedHook(executablePath string, cachePath string) map[string]any {
-	return map[string]any{
-		"name":             managedHookName,
-		"llm_quota_marker": managedHookMarker,
-		"matcher":          "*",
-		"hooks": []any{
-			map[string]any{
-				"type":    "command",
-				"command": ManagedHookCommand(executablePath, cachePath),
-			},
-		},
-	}
 }
 
 func ManagedHookCommand(executablePath string, cachePath string) string {

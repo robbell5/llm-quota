@@ -22,16 +22,18 @@ v1.0 is requirement-complete and archived. The milestone audit status is `tech_d
 - [v1.0 requirements archive](milestones/v1.0-REQUIREMENTS.md)
 - [v1.0 audit archive](milestones/v1.0-MILESTONE-AUDIT.md)
 
-## Next Milestone Goals
+## Current Milestone: v1.1 UI Polish and Small Features
 
-Fresh requirements have not been defined yet. Start the next cycle with `$gsd-new-milestone`.
+**Goal:** Make the shipped quota pane more polished, better aligned, and easier to tailor for one-provider use while preserving the local-only foreground TUI model.
 
-Candidate v1.1 inputs from the close record:
+**Target features:**
 
-- Decide whether to surface immediate refresh-failure footer hints while last-known-good rows are still non-stale.
-- Validate or replace the Homebrew HEAD install path with release/tap evidence.
-- Clarify documentation language around the managed Claude statusline cache writer versus user-facing statusline integration.
-- Consider whether OpenCode/OpenAI usage visibility belongs in scope, given current local OpenCode data lacks subscription window percentages and reset times.
+- Clean right-side alignment for percent and reset countdown text, including mixed-width values such as `0h` and `21h`.
+- One source-level last-refreshed date/time line under the Claude rows and one under the Codex rows.
+- Optional solid progress bars in addition to the current segmented bar look.
+- Provider visibility controls so users can run Claude-only or Codex-only views without placeholder clutter.
+- Refresh animation that fills from empty on startup/manual refresh and animates from previous value to new value on automatic refresh.
+- Small glanceability polish, including immediate refresh-failure hints when last-known-good rows remain visible.
 
 ## Requirements
 
@@ -47,7 +49,10 @@ Candidate v1.1 inputs from the close record:
 
 ### Active
 
-- No active post-v1 requirements yet. Define v1.1 requirements with `$gsd-new-milestone`.
+- Improve row alignment, source freshness display, and narrow-pane rendering polish for the existing four-window quota view.
+- Add small display preferences for solid bars and Claude-only or Codex-only views.
+- Add refresh animations that communicate updates without distracting from the tmux-pane use case.
+- Update tests and documentation so the new display behavior is deterministic and discoverable.
 
 ### Out of Scope
 
@@ -95,6 +100,7 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Use Claude statusline wrapper for quota cache capture | Real validation showed quota `rate_limits` are available to the statusline command, not the earlier PostToolUse hook path. | Validated in Phase 05 |
 | Preserve symlinked Claude settings during install | Rob's settings are dotfiles-managed; installer writes must update the target without replacing the symlink. | Validated in Phase 05 |
 | Provide a safe Claude setup uninstaller | Users need a reversible setup flow that removes only app-owned configuration and leaves local cache/state files intact. | Validated in Phase 06 |
+| Keep v1.1 focused on UI polish and small preferences | The v1.0 data-source model works; this milestone should make the pane easier to read and tailor without adding provider complexity. | Pending |
 
 ## Evolution
 
@@ -117,4 +123,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-21 after v1.0 milestone*
+*Last updated: 2026-05-21 after starting v1.1 milestone*

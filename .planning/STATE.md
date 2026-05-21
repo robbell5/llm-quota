@@ -1,17 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: MVP
-status: awaiting_next_milestone
-stopped_at: Milestone v1.0 archived
-last_updated: 2026-05-21T22:21:13Z
-last_activity: 2026-05-21 - Milestone v1.0 completed and archived
+milestone: v1.1
+milestone_name: UI Polish and Small Features
+status: planning
+last_updated: "2026-05-21T22:41:49.992Z"
+last_activity: 2026-05-21 - Milestone v1.1 roadmap created
 progress:
-  total_phases: 6
-  completed_phases: 6
-  total_plans: 15
-  completed_plans: 15
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 6
+  completed_plans: 0
+  percent: 0
 ---
 
 # Project State
@@ -21,18 +20,24 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Rob can glance at one tmux pane and immediately know how close Claude Code and Codex are to their 5-hour and 7-day limits.
-**Current focus:** Planning next milestone
+**Current focus:** v1.1 UI Polish and Small Features
 
 ## Current Position
 
-Phase: Milestone v1.0 complete
-Plan: -
-Status: Awaiting next milestone
-Last activity: 2026-05-21 - Milestone v1.0 completed and archived
-
-Progress: [##########] 100%
+Phase: 7 - Row Alignment and Source Freshness
+Plan: —
+Status: Ready for phase discussion or planning
+Last activity: 2026-05-21 — Milestone v1.1 roadmap created
 
 ## Milestone Summary
+
+v1.1 will polish the shipped local-only quota dashboard with cleaner row alignment, source-level refreshed date/time lines, solid-bar and provider-visibility display preferences, refresh animation, and real-pane validation.
+
+Active roadmap:
+
+- Phase 7: Row Alignment and Source Freshness
+- Phase 8: Display Preferences
+- Phase 9: Refresh Animation and Polish Validation
 
 v1.0 shipped the local-only Go/Bubble Tea quota dashboard with Claude setup, Codex rollout parsing, refresh resilience, responsive rendering, install docs, real tmux-pane validation, and safe Claude setup uninstall/reinstall support.
 
@@ -56,14 +61,14 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 
 ### Pending Todos
 
-- Define v1.1 requirements and roadmap with `$gsd-new-milestone`.
-- Decide whether warning-level v1.0 tech debt belongs in v1.1.
+- Discuss or plan Phase 7 with `$gsd-discuss-phase 7` or `$gsd-plan-phase 7`.
+- Decide during Phase 8 whether display preferences should remain startup-only or include any runtime toggle behavior.
 
 ### Blockers/Concerns
 
 - Homebrew HEAD install path needs external validation or supporting release/tap evidence.
 - README statusline wording should distinguish user-facing statusline integration from the managed Claude cache writer.
-- Last-known-good refresh failures preserve data but do not show an immediate non-stale current-error footer hint.
+- Last-known-good refresh failures preserve data but do not show an immediate non-stale current-error footer hint; v1.1 Phase 7 includes this as polish.
 
 ## Deferred Items
 
@@ -87,4 +92,4 @@ Resume file: None
 
 ## Operator Next Steps
 
-- Start the next milestone with `$gsd-new-milestone`.
+- Start Phase 7 with `$gsd-discuss-phase 7` or `$gsd-plan-phase 7`.

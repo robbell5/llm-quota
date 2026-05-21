@@ -28,6 +28,7 @@ type appDeps struct {
 	ClaudeHookDeclined       func(string) (bool, error)
 	RecordClaudeHookDeclined func(string) error
 	InstallClaudeHook        func(install.ClaudeHookPaths) (install.InstallResult, error)
+	UninstallClaudeHook      func(install.ClaudeHookPaths) (install.InstallResult, error)
 	CodexSessionsRoot        func() (string, error)
 	StartTUI                 func(tui.Model) error
 }
@@ -52,6 +53,12 @@ func run(args []string, streams appStreams, deps appDeps) int {
 				return 2
 			}
 			return runInstallClaudeHook(streams, deps)
+		case "uninstall-claude-hook":
+			if len(args) > 1 {
+				fmt.Fprintf(streams.Stderr, "llm-quota: unknown argument: %s\n", args[1])
+				return 2
+			}
+			return runUninstallClaudeHook(streams, deps)
 		default:
 			fmt.Fprintf(streams.Stderr, "llm-quota: unknown argument: %s\n", args[0])
 			return 2
@@ -82,6 +89,24 @@ func runInstallClaudeHook(streams appStreams, deps appDeps) int {
 		return 1
 	}
 	result, err := deps.InstallClaudeHook(paths)
+	if err != nil {
+		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
+		return 1
+	}
+	fmt.Fprintln(streams.Stdout, result.Message)
+	if result.BackupPath != "" {
+		fmt.Fprintf(streams.Stdout, "backup: %s\n", result.BackupPath)
+	}
+	return 0
+}
+
+func runUninstallClaudeHook(streams appStreams, deps appDeps) int {
+	paths, err := deps.Paths()
+	if err != nil {
+		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
+		return 1
+	}
+	result, err := deps.UninstallClaudeHook(paths)
 	if err != nil {
 		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
 		return 1
@@ -217,6 +242,9 @@ func (deps appDeps) withDefaults() appDeps {
 	}
 	if deps.InstallClaudeHook == nil {
 		deps.InstallClaudeHook = install.InstallClaudeHook
+	}
+	if deps.UninstallClaudeHook == nil {
+		deps.UninstallClaudeHook = install.UninstallClaudeHook
 	}
 	if deps.CodexSessionsRoot == nil {
 		deps.CodexSessionsRoot = defaultCodexSessionsRoot

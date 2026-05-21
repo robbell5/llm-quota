@@ -26,6 +26,8 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 - Phase 04 validated responsive row rendering at widths 50, 49, 30, 29, and 20 with automated ANSI-stripped width tests.
 - Phase 05 validated README install/setup/troubleshooting instructions and approved real tmux-pane operation.
 - Phase 05 validated Claude quota capture through an app-owned statusline cache writer that preserves symlinked settings and existing statusline behavior.
+- Phase 06 validated a safe Claude setup uninstaller that removes only app-owned statusline configuration and preserves unrelated Claude settings.
+- Phase 06 validated uninstall documentation and human-approved local install -> uninstall -> reinstall behavior.
 
 ### Active
 
@@ -83,6 +85,7 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane, with a known spike to revisit if scrollback matters. | -- Pending |
 | Use Claude statusline wrapper for quota cache capture | Real validation showed quota `rate_limits` are available to the statusline command, not the earlier PostToolUse hook path. | Validated in Phase 05 |
 | Preserve symlinked Claude settings during install | Rob's settings are dotfiles-managed; installer writes must update the target without replacing the symlink. | Validated in Phase 05 |
+| Provide a safe Claude setup uninstaller | Users need a reversible setup flow that removes only app-owned configuration and leaves local cache/state files intact. | Validated in Phase 06 |
 
 ## Evolution
 
@@ -105,4 +108,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-20 after Phase 05 completion*
+*Last updated: 2026-05-21 after Phase 06 completion*

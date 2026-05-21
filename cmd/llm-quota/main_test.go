@@ -49,6 +49,79 @@ func TestRunInstallClaudeHookCommandInstallsWithoutStartingTUI(t *testing.T) {
 	}
 }
 
+func TestRunUninstallClaudeHookCommandUninstallsWithoutStartingTUI(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	var uninstalled bool
+	var tuiStarted bool
+	backupPath := filepath.Join(t.TempDir(), "settings.json.llm-quota-backup")
+
+	code := run([]string{"uninstall-claude-hook"}, appStreams{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}, appDeps{
+		UninstallClaudeHook: func(paths install.ClaudeHookPaths) (install.InstallResult, error) {
+			uninstalled = true
+			return install.InstallResult{Changed: true, BackupPath: backupPath, Message: "uninstalled llm-quota Claude hook"}, nil
+		},
+		StartTUI: func(model tui.Model) error {
+			tuiStarted = true
+			return nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+	}
+	if !uninstalled {
+		t.Fatal("expected uninstall-claude-hook to call uninstaller")
+	}
+	if tuiStarted {
+		t.Fatal("uninstall-claude-hook should not start the TUI")
+	}
+	if !strings.Contains(stdout.String(), "uninstalled llm-quota Claude hook") {
+		t.Fatalf("expected uninstaller result message on stdout, got %q", stdout.String())
+	}
+	if !strings.Contains(stdout.String(), "backup: "+backupPath) {
+		t.Fatalf("expected backup path on stdout, got %q", stdout.String())
+	}
+}
+
+func TestRunUninstallClaudeHookRejectsExtraArgs(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	var uninstalled bool
+	var tuiStarted bool
+
+	code := run([]string{"uninstall-claude-hook", "extra"}, appStreams{
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}, appDeps{
+		UninstallClaudeHook: func(paths install.ClaudeHookPaths) (install.InstallResult, error) {
+			uninstalled = true
+			return install.InstallResult{Changed: true, Message: "uninstalled llm-quota Claude hook"}, nil
+		},
+		StartTUI: func(model tui.Model) error {
+			tuiStarted = true
+			return nil
+		},
+	})
+
+	if code != 2 {
+		t.Fatalf("exit code = %d, want 2", code)
+	}
+	if got, want := stderr.String(), "llm-quota: unknown argument: extra\n"; got != want {
+		t.Fatalf("stderr = %q, want %q", got, want)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("stdout = %q, want empty", stdout.String())
+	}
+	if uninstalled {
+		t.Fatal("invalid uninstall-claude-hook args should not call uninstaller")
+	}
+	if tuiStarted {
+		t.Fatal("invalid uninstall-claude-hook args should not start the TUI")
+	}
+}
+
 func TestRunFirstLaunchDeclineRecordsDeclineBeforeStartingTUI(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	var events []string

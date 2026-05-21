@@ -2,7 +2,7 @@
 
 ## Overview
 
-The v1.1 roadmap improves the shipped local-only quota pane without changing the data-source architecture. The milestone focuses on glanceability: clean right-side alignment, per-source refreshed date/time lines, display preferences for one-provider use, optional solid bars, and refresh animation that makes updates visible without turning the pane into a noisy dashboard.
+The v1.1 roadmap improves the shipped local-only quota pane without changing the data-source architecture. The milestone focuses on glanceability: clean right-side alignment, an added Claude Sonnet-only weekly limit row, per-source refreshed date/time lines, display preferences for one-provider use, optional solid bars, and refresh animation that makes updates visible without turning the pane into a noisy dashboard.
 
 ## Milestones
 
@@ -16,31 +16,33 @@ The v1.1 roadmap improves the shipped local-only quota pane without changing the
 - Integer phases continue from the previous milestone.
 - v1.1 starts at Phase 7 because v1.0 shipped Phases 1-6.
 
-- [ ] **Phase 7: Row Alignment and Source Freshness** - Clean up the quota row layout and add one last-refreshed date/time line per source group.
+- [ ] **Phase 7: Row Alignment, Claude Sonnet Limit, and Source Freshness** - Add the Claude Sonnet-only weekly row, clean up quota row layout, and add one last-refreshed date/time line per source group.
 - [ ] **Phase 8: Display Preferences** - Add solid-bar rendering and Claude-only or Codex-only display controls.
 - [ ] **Phase 9: Refresh Animation and Polish Validation** - Animate refresh transitions and verify the polished pane in tests and real tmux layouts.
 
 ## Phase Details
 
-### Phase 7: Row Alignment and Source Freshness
+### Phase 7: Row Alignment, Claude Sonnet Limit, and Source Freshness
 
-**Goal**: User can read quota rows with a clean right column and source-level freshness information in compact tmux panes.
+**Goal**: User can read quota rows, including the Claude Sonnet-only weekly limit when available, with a clean right column and source-level freshness information in compact tmux panes.
 **Depends on**: v1.0 MVP
-**Requirements**: POL-01, POL-02, POL-03, POL-04
+**Requirements**: CLD-05, CLD-06, POL-01, POL-02, POL-03, POL-04
 **Success Criteria** (what must be TRUE):
 
-1. Percent and reset countdown text line up cleanly even when one row shows values like `0h 54m` and another shows `21h 1m`.
-2. Claude rows render one source-level last-refreshed date/time line under the Claude window rows.
-3. Codex rows render one source-level last-refreshed date/time line under the Codex window rows.
-4. Normal, narrow, and very narrow layouts remain readable without wrapping or incoherent gaps.
-5. A refresh failure can surface a concise source-level hint while preserving last-known-good quota rows.
+1. Claude quota rendering includes a Sonnet-only weekly row/bar when the local Claude cache exposes that limit.
+2. Claude quota rendering handles missing Sonnet-only weekly data with a clear placeholder or omission behavior.
+3. Percent and reset countdown text line up cleanly even when one row shows values like `0h 54m` and another shows `21h 1m`.
+4. Claude rows render one source-level last-refreshed date/time line under the Claude window rows.
+5. Codex rows render one source-level last-refreshed date/time line under the Codex window rows.
+6. Normal, narrow, and very narrow layouts remain readable without wrapping or incoherent gaps.
+7. A refresh failure can surface a concise source-level hint while preserving last-known-good quota rows.
 
 **Plans**: 2 plans
 
 Plans:
 **Wave 1**
 
-- [ ] 07-01-PLAN.md - Refactor quota row layout widths, right-column alignment, and compact reset text rendering.
+- [ ] 07-01-PLAN.md - Add the Claude Sonnet-only weekly row and refactor quota row layout widths, right-column alignment, and compact reset text rendering.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -114,7 +116,7 @@ Phases execute in numeric order: 7 -> 8 -> 9
 | 4. Quota Display and Responsive Rendering | v1.0 | 2/2 | Complete | 2026-05-19 |
 | 5. Install, Docs, and Real-Pane Validation | v1.0 | 2/2 | Complete | 2026-05-20 |
 | 6. Claude Setup Uninstaller | v1.0 | 2/2 | Complete | 2026-05-21 |
-| 7. Row Alignment and Source Freshness | v1.1 | 0/2 | Planned | - |
+| 7. Row Alignment, Claude Sonnet Limit, and Source Freshness | v1.1 | 0/2 | Planned | - |
 | 8. Display Preferences | v1.1 | 0/2 | Planned | - |
 | 9. Refresh Animation and Polish Validation | v1.1 | 0/2 | Planned | - |
 
@@ -122,6 +124,8 @@ Phases execute in numeric order: 7 -> 8 -> 9
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| CLD-05 | Phase 7 | Pending |
+| CLD-06 | Phase 7 | Pending |
 | POL-01 | Phase 7 | Pending |
 | POL-02 | Phase 7 | Pending |
 | POL-03 | Phase 7 | Pending |
@@ -141,8 +145,8 @@ Phases execute in numeric order: 7 -> 8 -> 9
 
 **Coverage:**
 
-- v1.1 requirements: 16 total
-- Mapped to phases: 16
+- v1.1 requirements: 18 total
+- Mapped to phases: 18
 - Unmapped: 0
 
 ## Next

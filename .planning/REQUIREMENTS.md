@@ -10,6 +10,8 @@ Requirements for the UI polish and small-features milestone. Each maps to one ro
 
 ### Layout Polish
 
+- [ ] **CLD-05**: User can see Claude Sonnet-only weekly quota usage as an additional Claude row when local Claude quota data exposes that limit.
+- [ ] **CLD-06**: User sees a clear placeholder or omission behavior for the Claude Sonnet-only weekly row when local Claude quota data does not expose that limit.
 - [ ] **POL-01**: User can read percent and reset countdown values in a cleanly aligned right column even when reset text uses different-width values such as `0h` and `21h`.
 - [ ] **POL-02**: User can see one last-refreshed date/time line under the Claude rows and one last-refreshed date/time line under the Codex rows.
 - [ ] **POL-03**: User can still read aligned rows and source freshness lines at normal, narrow, and very narrow pane widths without broken wrapping.
@@ -63,6 +65,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Alerts or notifications | v1.1 should improve glanceability, not add background attention mechanisms. |
 | Historical charts or usage graphs | The product remains a current-status tmux pane. |
 | Forecasting or burn-rate projection | Reset countdowns and current usage remain the trusted signal. |
+| General per-model breakdowns | Only the explicitly requested Claude Sonnet-only weekly cap is in scope. |
 | Full interactive settings UI | Startup preferences are enough for this small milestone; runtime settings can be considered later. |
 | Persistent preference migration system | Too heavy for a small display-preference milestone. |
 
@@ -72,6 +75,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
+| CLD-05 | Phase 7 | Pending |
+| CLD-06 | Phase 7 | Pending |
 | POL-01 | Phase 7 | Pending |
 | POL-02 | Phase 7 | Pending |
 | POL-03 | Phase 7 | Pending |
@@ -91,8 +96,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 **Coverage:**
 
-- v1.1 requirements: 16 total
-- Mapped to phases: 16
+- v1.1 requirements: 18 total
+- Mapped to phases: 18
 - Unmapped: 0
 
 ---

@@ -4,7 +4,7 @@
 
 `llm-quota` is a tiny terminal UI that shows current Claude Code and Codex subscription quota usage in one always-running screen. It is built for Rob as a dedicated tmux-pane tool that refreshes automatically and avoids network calls by reading local usage data.
 
-The shipped v1 product shows all four rolling subscription windows: Claude Code 5-hour, Claude Code 7-day, Codex 5-hour, and Codex 7-day. Each row shows percent used, a colored progress bar, and the reset countdown. It also includes standalone Claude cache setup, safe uninstall/reinstall behavior, local Codex rollout parsing, last-known-good refresh behavior, and responsive rendering for narrow panes.
+The shipped v1 product shows all four primary rolling subscription windows: Claude Code 5-hour, Claude Code 7-day, Codex 5-hour, and Codex 7-day. Each row shows percent used, a colored progress bar, and the reset countdown. It also includes standalone Claude cache setup, safe uninstall/reinstall behavior, local Codex rollout parsing, last-known-good refresh behavior, and responsive rendering for narrow panes.
 
 ## Core Value
 
@@ -29,6 +29,7 @@ v1.0 is requirement-complete and archived. The milestone audit status is `tech_d
 **Target features:**
 
 - Clean right-side alignment for percent and reset countdown text, including mixed-width values such as `0h` and `21h`.
+- A Claude Sonnet-only weekly limit row/bar when local Claude quota data exposes that limit.
 - One source-level last-refreshed date/time line under the Claude rows and one under the Codex rows.
 - Optional solid progress bars in addition to the current segmented bar look.
 - Provider visibility controls so users can run Claude-only or Codex-only views without placeholder clutter.
@@ -49,7 +50,8 @@ v1.0 is requirement-complete and archived. The milestone audit status is `tech_d
 
 ### Active
 
-- Improve row alignment, source freshness display, and narrow-pane rendering polish for the existing four-window quota view.
+- Improve row alignment, source freshness display, and narrow-pane rendering polish for the quota view.
+- Add the Claude Sonnet-only weekly limit as an additional Claude quota row when available.
 - Add small display preferences for solid bars and Claude-only or Codex-only views.
 - Add refresh animations that communicate updates without distracting from the tmux-pane use case.
 - Update tests and documentation so the new display behavior is deterministic and discoverable.
@@ -60,7 +62,7 @@ v1.0 is requirement-complete and archived. The milestone audit status is `tech_d
 - Forecasting or projections -- v1 reports current usage and reset times only.
 - Alerts or notifications -- thresholds are visual only.
 - Multi-account support -- this is for Rob's local machine and current accounts.
-- Per-model breakdowns -- v1 tracks product-level subscription windows only.
+- General per-model breakdowns beyond the explicit Claude Sonnet-only weekly limit -- the target view stays focused on subscription windows and one known Claude-specific cap.
 - A daemon or background service -- the tool is a foreground Bubble Tea program.
 - A one-shot mode -- the tool always runs in its TUI event loop.
 - Network fallback for Claude or Codex -- local data keeps the tool small and low-friction.
@@ -101,6 +103,7 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Preserve symlinked Claude settings during install | Rob's settings are dotfiles-managed; installer writes must update the target without replacing the symlink. | Validated in Phase 05 |
 | Provide a safe Claude setup uninstaller | Users need a reversible setup flow that removes only app-owned configuration and leaves local cache/state files intact. | Validated in Phase 06 |
 | Keep v1.1 focused on UI polish and small preferences | The v1.0 data-source model works; this milestone should make the pane easier to read and tailor without adding provider complexity. | Pending |
+| Add Claude Sonnet-only weekly limit as a targeted row | Rob specifically wants the known Claude weekly Sonnet cap visible, while broad per-model breakdowns remain out of scope. | Pending |
 
 ## Evolution
 

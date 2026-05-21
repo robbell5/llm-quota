@@ -24,18 +24,18 @@ See: .planning/PROJECT.md (updated 2026-05-21)
 
 ## Current Position
 
-Phase: 7 - Row Alignment and Source Freshness
+Phase: 7 - Row Alignment, Claude Sonnet Limit, and Source Freshness
 Plan: —
 Status: Ready for phase discussion or planning
 Last activity: 2026-05-21 — Milestone v1.1 roadmap created
 
 ## Milestone Summary
 
-v1.1 will polish the shipped local-only quota dashboard with cleaner row alignment, source-level refreshed date/time lines, solid-bar and provider-visibility display preferences, refresh animation, and real-pane validation.
+v1.1 will polish the shipped local-only quota dashboard with cleaner row alignment, a Claude Sonnet-only weekly limit row, source-level refreshed date/time lines, solid-bar and provider-visibility display preferences, refresh animation, and real-pane validation.
 
 Active roadmap:
 
-- Phase 7: Row Alignment and Source Freshness
+- Phase 7: Row Alignment, Claude Sonnet Limit, and Source Freshness
 - Phase 8: Display Preferences
 - Phase 9: Refresh Animation and Polish Validation
 

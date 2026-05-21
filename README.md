@@ -15,12 +15,20 @@ Each available row shows percent used, a colored progress bar, and the reset cou
 
 Choose one install path.
 
-To install `llm-quota` on your `PATH`, run:
+To install with Homebrew from the current `main` branch, run:
+
+```sh
+brew install --HEAD robbell5/tap/llm-quota
+llm-quota install-claude-hook
+llm-quota
+```
+
+Homebrew links the `llm-quota` command into its managed bin directory, so no Go `PATH` setup is required.
+
+For Go developers who already have Go's install bin directory on `PATH`, this also works:
 
 ```sh
 go install github.com/robbell5/llm-quota/cmd/llm-quota@latest
-llm-quota install-claude-hook
-llm-quota
 ```
 
 For a local repository smoke check without changing a wider shell setup, build and run the local binary from the repo root:
@@ -35,7 +43,7 @@ go build ./cmd/llm-quota
 
 ## Set up Claude quota data
 
-If you installed with `go install`, the explicit Claude setup command is:
+If you installed with Homebrew or with a Go install bin directory already on `PATH`, the explicit Claude setup command is:
 
 ```sh
 llm-quota install-claude-hook
@@ -59,7 +67,7 @@ Normal `llm-quota` launches may also offer to install this app-owned cache write
 
 ### Uninstall Claude quota data setup
 
-If you installed with `go install`, remove the app-owned Claude quota capture setup with:
+If `llm-quota` is on your `PATH`, remove the app-owned Claude quota capture setup with:
 
 ```sh
 llm-quota uninstall-claude-hook

@@ -4,60 +4,69 @@
 
 `llm-quota` is a tiny terminal UI that shows current Claude Code and Codex subscription quota usage in one always-running screen. It is built for Rob as a dedicated tmux-pane tool that refreshes automatically and avoids network calls by reading local usage data.
 
-The v1 product shows all four rolling subscription windows: Claude Code 5-hour, Claude Code 7-day, Codex 5-hour, and Codex 7-day. Each row shows percent used, a colored progress bar, and the reset countdown.
+The shipped v1 product shows all four rolling subscription windows: Claude Code 5-hour, Claude Code 7-day, Codex 5-hour, and Codex 7-day. Each row shows percent used, a colored progress bar, and the reset countdown. It also includes standalone Claude cache setup, safe uninstall/reinstall behavior, local Codex rollout parsing, last-known-good refresh behavior, and responsive rendering for narrow panes.
 
 ## Core Value
 
 Rob can glance at one tmux pane and immediately know how close Claude Code and Codex are to their 5-hour and 7-day limits.
 
+## Current State
+
+**Shipped version:** v1.0 MVP on 2026-05-21
+
+v1.0 is requirement-complete and archived. The milestone audit status is `tech_debt`: all 27 v1 requirements and all 6 phases are satisfied, with warning-level follow-up items recorded for later prioritization.
+
+**Archive:**
+
+- [v1.0 roadmap archive](milestones/v1.0-ROADMAP.md)
+- [v1.0 requirements archive](milestones/v1.0-REQUIREMENTS.md)
+- [v1.0 audit archive](milestones/v1.0-MILESTONE-AUDIT.md)
+
+## Next Milestone Goals
+
+Fresh requirements have not been defined yet. Start the next cycle with `$gsd-new-milestone`.
+
+Candidate v1.1 inputs from the close record:
+
+- Decide whether to surface immediate refresh-failure footer hints while last-known-good rows are still non-stale.
+- Validate or replace the Homebrew HEAD install path with release/tap evidence.
+- Clarify documentation language around the managed Claude statusline cache writer versus user-facing statusline integration.
+- Consider whether OpenCode/OpenAI usage visibility belongs in scope, given current local OpenCode data lacks subscription window percentages and reset times.
+
 ## Requirements
 
 ### Validated
 
-- Phase 02 validated that Codex quota data can be read from local rollout JSONL files using synthetic fixtures.
-- Phase 02 validated that first launch can prompt for app-owned Claude hook installation without mutating unrelated Claude settings.
-- Phase 02 validated that the installed Claude hook command can write `ClaudeReader`-compatible cache JSON atomically.
-- Phase 03 validated automatic 30-second refresh scheduling and immediate manual `r` refresh handling in the Bubble Tea model.
-- Phase 03 validated per-source last-known-good data preservation when later refreshes fail.
-- Phase 03 validated source-backed startup wiring from local Claude and Codex readers into the TUI model.
-- Phase 03 validated stale model state and refresh merge behavior with automated tests; final stale warning copy remains active for Phase 4.
-- Phase 04 validated all four Claude/Codex quota rows with percent text, static colored progress bars, and reset countdown tokens.
-- Phase 04 validated missing-source and stale-source footer hints without exposing raw parser categories.
-- Phase 04 validated responsive row rendering at widths 50, 49, 30, 29, and 20 with automated ANSI-stripped width tests.
-- Phase 05 validated README install/setup/troubleshooting instructions and approved real tmux-pane operation.
-- Phase 05 validated Claude quota capture through an app-owned statusline cache writer that preserves symlinked settings and existing statusline behavior.
-- Phase 06 validated a safe Claude setup uninstaller that removes only app-owned statusline configuration and preserves unrelated Claude settings.
-- Phase 06 validated uninstall documentation and human-approved local install -> uninstall -> reinstall behavior.
+- All 27 v1.0 requirements are complete and archived in [milestones/v1.0-REQUIREMENTS.md](milestones/v1.0-REQUIREMENTS.md).
+- Phase 02 validated Codex quota data parsing from local rollout JSONL files using synthetic fixtures.
+- Phase 02 validated first-launch permission prompting and app-owned Claude setup installation without mutating unrelated Claude settings.
+- Phase 03 validated automatic refresh, manual refresh, stale state, and per-source last-known-good preservation.
+- Phase 04 validated all four quota rows, threshold progress bars, reset countdowns, missing/stale hints, and responsive layouts.
+- Phase 05 validated install/setup/troubleshooting documentation and real tmux-pane operation.
+- Phase 06 validated safe Claude setup uninstall/reinstall behavior that preserves unrelated Claude settings and cache/state files.
 
 ### Active
 
-- [ ] Refresh quota data automatically every 30 seconds while running.
-- [ ] Refresh immediately when the user presses `r` or the terminal pane is resized.
-- [ ] Exit cleanly on `q` or `Ctrl-C`.
-- [ ] Read Codex quota data from the most recent local rollout JSONL file.
-- [ ] Prompt for permission to install a small Claude hook/cache writer during setup or first launch.
-- [ ] Read Claude quota data from the local cache file written by the installed `llm-quota` Claude hook.
-- [ ] Keep rendering last-known-good data when a source temporarily fails.
-- [x] Validate the completed display in the intended real tmux pane and document install/troubleshooting flow.
+- No active post-v1 requirements yet. Define v1.1 requirements with `$gsd-new-milestone`.
 
 ### Out of Scope
 
 - Usage history or graphing -- the goal is a glanceable current-status pane.
-- Forecasting or projections -- v1 only reports current usage and reset times.
+- Forecasting or projections -- v1 reports current usage and reset times only.
 - Alerts or notifications -- thresholds are visual only.
 - Multi-account support -- this is for Rob's local machine and current accounts.
 - Per-model breakdowns -- v1 tracks product-level subscription windows only.
 - A daemon or background service -- the tool is a foreground Bubble Tea program.
 - A one-shot mode -- the tool always runs in its TUI event loop.
 - Network fallback for Claude or Codex -- local data keeps the tool small and low-friction.
-- Depending on a custom Claude statusline script -- the app should work for users who do not have Rob's dotfiles.
-- Folding this view into any existing statusline -- this is a standalone tmux-pane tool.
+- Reading Claude credentials or macOS Keychain data -- avoids credential prompts and secret handling.
+- Depending on Rob's custom Claude statusline script -- the app installs and removes its own managed cache writer.
 
 ## Context
 
-The project is based on the design spec at `docs/superpowers/specs/2026-05-16-llm-quota-tui-design.md`. Both data sources are local: Codex exposes quota data in session rollout JSONL files, while Claude quota data will be written to `~/.cache/llm-quota/claude.json` by a small hook/cache writer installed by `llm-quota` itself.
+The project is based on the design spec at `docs/superpowers/specs/2026-05-16-llm-quota-tui-design.md`. Both data sources are local: Codex exposes quota data in session rollout JSONL files, while Claude quota data is written to `~/.cache/llm-quota/claude.json` by an app-owned statusline cache writer installed by `llm-quota`.
 
-The implementation is intentionally small. Go and Bubble Tea are chosen because Rob wants to learn Bubble Tea and because an always-running terminal pane fits Bubble Tea's event loop model. The Go project owns the TUI, source readers, and Claude hook installation flow. Rob's existing statusline script can be used as reference code, but it is not a runtime dependency.
+The implementation is intentionally small. Go and Bubble Tea are chosen because Rob wants to learn Bubble Tea and because an always-running terminal pane fits Bubble Tea's event loop model. The Go project owns the TUI, source readers, Claude setup flow, and Claude setup uninstaller.
 
 The TUI should never crash because quota data is missing, stale, or malformed. Old data with a clear warning is more useful than a blank display, and missing first-run data should produce readable placeholder rows plus actionable footer hints.
 
@@ -75,14 +84,14 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Use Go and Bubble Tea | Rob wants to learn Bubble Tea, and the app is naturally event-loop driven. | -- Pending |
-| Use local data sources only | Keeps the tool small and avoids credential prompts, OAuth fallback paths, and network dependencies. | -- Pending |
-| Install an app-owned Claude hook/cache writer | The TUI must work for users without Rob's custom statusline while still avoiding OAuth, Keychain reads, and network calls. | Validated in Phase 02 |
+| Use Go and Bubble Tea | Rob wants to learn Bubble Tea, and the app is naturally event-loop driven. | Good; shipped v1.0 |
+| Use local data sources only | Keeps the tool small and avoids credential prompts, OAuth fallback paths, and network dependencies. | Good; shipped v1.0 |
+| Install an app-owned Claude hook/cache writer | The TUI must work for users without Rob's custom statusline while still avoiding OAuth, Keychain reads, and network calls. | Validated in Phase 02 and Phase 05 |
 | Prompt for Claude hook installation during setup or first launch | A new user should be able to install the viewer and required Claude cache producer in one flow. | Validated in Phase 02 |
 | Read Codex data from the newest rollout JSONL | Codex writes quota data locally during interactive sessions. | Validated in Phase 02 |
-| Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | Validated in Phase 03 |
+| Keep last-known-good data on refresh failure | An old number with a warning is more useful than blanking the display. | Validated in Phase 03; footer hint polish remains tech debt |
 | Use calm threshold colors instead of alerts | The pane should stay glanceable without noisy badges or warning words. | Validated in Phase 04 |
-| Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane, with a known spike to revisit if scrollback matters. | -- Pending |
+| Start with Bubble Tea alt-screen | Cleaner for a dedicated tmux pane. | Good for v1.0 real-pane validation |
 | Use Claude statusline wrapper for quota cache capture | Real validation showed quota `rate_limits` are available to the statusline command, not the earlier PostToolUse hook path. | Validated in Phase 05 |
 | Preserve symlinked Claude settings during install | Rob's settings are dotfiles-managed; installer writes must update the target without replacing the symlink. | Validated in Phase 05 |
 | Provide a safe Claude setup uninstaller | Users need a reversible setup flow that removes only app-owned configuration and leaves local cache/state files intact. | Validated in Phase 06 |
@@ -108,4 +117,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-21 after Phase 06 completion*
+*Last updated: 2026-05-21 after v1.0 milestone*

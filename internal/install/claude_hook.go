@@ -236,19 +236,6 @@ func removeManagedToolHook(config map[string]any) {
 	hooks[claudeHookEvent] = kept
 }
 
-func getHookEntries(hooks map[string]any, event string) ([]any, error) {
-	raw, ok := hooks[event]
-	if !ok || raw == nil {
-		return []any{}, nil
-	}
-
-	entries, ok := raw.([]any)
-	if !ok {
-		return nil, fmt.Errorf("unsupported Claude hook event %q shape %T", event, raw)
-	}
-	return entries, nil
-}
-
 func isManagedHook(hook map[string]any) bool {
 	return hook["llm_quota_marker"] == managedHookMarker
 }

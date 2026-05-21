@@ -4,13 +4,13 @@ milestone: v1.0
 milestone_name: milestone
 status: executing
 stopped_at: Phase 5 context gathered
-last_updated: "2026-05-20T15:05:20.979Z"
-last_activity: 2026-05-20 -- Phase 06 planning complete
+last_updated: "2026-05-21T18:40:59.129Z"
+last_activity: 2026-05-21
 progress:
   total_phases: 6
   completed_phases: 5
   total_plans: 15
-  completed_plans: 13
+  completed_plans: 14
   percent: 83
 ---
 
@@ -21,16 +21,16 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-16)
 
 **Core value:** Rob can glance at one tmux pane and immediately know how close Claude Code and Codex are to their 5-hour and 7-day limits.
-**Current focus:** Milestone complete
+**Current focus:** Phase 06 — i-think-we-are-missing-an-uninstaller
 
 ## Current Position
 
-Phase: 05
-Plan: Not started
+Phase: 06 (i-think-we-are-missing-an-uninstaller) — EXECUTING
+Plan: 2 of 2
 Status: Ready to execute
-Last activity: 2026-05-20 -- Phase 06 planning complete
+Last activity: 2026-05-21
 
-Progress: [██████████] 100%
+Progress: [█████████░] 93%
 
 ## Performance Metrics
 
@@ -68,6 +68,7 @@ Progress: [██████████] 100%
 | Phase 03-refresh-and-resilience-loop P02 | 4 min | 3 tasks | 4 files |
 | Phase 04-quota-display-and-responsive-rendering P01 | 2 min | 2 tasks | 3 files |
 | Phase 04-quota-display-and-responsive-rendering P02 | 3 min | 2 tasks | 2 files |
+| Phase 06-i-think-we-are-missing-an-uninstaller P01 | 3 min | 2 tasks | 5 files |
 
 ## Accumulated Context
 
@@ -106,6 +107,8 @@ Decisions are logged in PROJECT.md Key Decisions table. Recent decisions affecti
 - [Phase 04-02]: Footer recovery copy is selected from typed model state and never renders raw SourceError category strings. — Protects the source-error trust boundary while keeping troubleshooting copy actionable.
 - [Phase 04-02]: Responsive breakpoints are implemented against inner render width to preserve shell padding. — Keeps ANSI-stripped output within terminal width at 50, 49, 30, 29, and 20 columns.
 - [Phase 04-02]: Baseline footer includes r refresh only when it fits and no recovery hint has priority. — Prevents low-priority key help from displacing missing or stale source recovery copy.
+- [Phase 06]: [Phase 06 Plan 01]: Uninstall removes only llm-quota-marked Claude settings and does not delete app cache or state files. — Keeps uninstall scoped to integration removal without destructive cache/state cleanup. — Plan followed marker-scoped ownership boundary.
+- [Phase 06]: [Phase 06 Plan 01]: Wrapped statusline passthrough commands are restored as plain Claude statusLine commands during uninstall. — Preserves pre-existing user Claude statusline behavior. — Uninstall should reverse the managed wrapper without dropping user-owned statusline behavior.
 
 ### Pending Todos
 
@@ -126,6 +129,6 @@ Items acknowledged and carried forward from previous milestone close:
 
 ## Session Continuity
 
-Last session: 2026-05-20T14:00:53.956Z
+Last session: 2026-05-21T18:40:30.922Z
 Stopped at: Phase 5 context gathered
 Resume file: None

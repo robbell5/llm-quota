@@ -174,7 +174,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 **Goal:** User can safely remove the app-owned Claude setup integration and restore prior Claude statusline behavior without losing local quota cache files or unrelated Claude configuration.
 **Requirements**: CLD-03, DOC-01, DOC-02
 **Depends on:** Phase 5
-**Plans:** 1/2 plans executed
+**Plans:** 2/2 plans complete
 
 Plans:
 **Wave 1**
@@ -183,4 +183,4 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 uninstall command completion)*
 
-- [ ] 06-02-PLAN.md — Document uninstall usage and create the real-local uninstall/reinstall validation record.
+- [x] 06-02-PLAN.md — Document uninstall usage and create the real-local uninstall/reinstall validation record.

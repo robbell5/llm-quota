@@ -73,6 +73,52 @@ func InstallClaudeHook(paths ClaudeHookPaths) (InstallResult, error) {
 	}, nil
 }
 
+func UninstallClaudeHook(paths ClaudeHookPaths) (InstallResult, error) {
+	if paths.ClaudeConfigPath == "" {
+		return InstallResult{}, errors.New("claude config path is required")
+	}
+
+	config, existed, err := readClaudeConfig(paths.ClaudeConfigPath)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	if !existed || len(config) == 0 {
+		return InstallResult{Message: "llm-quota Claude hook is not installed"}, nil
+	}
+	original := cloneJSONMap(config)
+
+	if statusLine, ok := config["statusLine"].(map[string]any); ok && statusLine["llm_quota_marker"] == managedHookMarker {
+		passthrough, _ := statusLine["llm_quota_passthrough"].(string)
+		if passthrough != "" {
+			config["statusLine"] = map[string]any{
+				"type":    "command",
+				"command": passthrough,
+			}
+		} else {
+			delete(config, "statusLine")
+		}
+	}
+	removeManagedToolHook(config)
+
+	if reflect.DeepEqual(original, config) {
+		return InstallResult{Message: "llm-quota Claude hook is not installed"}, nil
+	}
+
+	backupPath, err := backupFile(paths.ClaudeConfigPath)
+	if err != nil {
+		return InstallResult{}, err
+	}
+	if err := writeJSONAtomic(paths.ClaudeConfigPath, config); err != nil {
+		return InstallResult{}, err
+	}
+
+	return InstallResult{
+		Changed:    true,
+		BackupPath: backupPath,
+		Message:    "uninstalled llm-quota Claude hook",
+	}, nil
+}
+
 func RecordClaudeHookDeclined(statePath string) error {
 	if statePath == "" {
 		return errors.New("state path is required")

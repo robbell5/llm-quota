@@ -9,7 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
-	"github.com/rob/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/sources"
 )
 
 var fixedNow = time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)

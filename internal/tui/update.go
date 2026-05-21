@@ -7,7 +7,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/rob/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/sources"
 )
 
 type refreshRequestedMsg struct{}

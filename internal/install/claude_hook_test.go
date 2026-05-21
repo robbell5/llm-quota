@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rob/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/sources"
 )
 
 func TestInstallClaudeHookPreservesUnrelatedHooksAndCreatesBackupOnlyOnChange(t *testing.T) {

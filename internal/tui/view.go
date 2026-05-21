@@ -10,7 +10,7 @@ import (
 	"charm.land/bubbles/v2/progress"
 	"charm.land/lipgloss/v2"
 
-	"github.com/rob/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/sources"
 )
 
 const (

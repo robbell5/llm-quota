@@ -11,9 +11,9 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
-	"github.com/rob/llm-quota/internal/install"
-	"github.com/rob/llm-quota/internal/sources"
-	"github.com/rob/llm-quota/internal/tui"
+	"github.com/robbell5/llm-quota/internal/install"
+	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/tui"
 )
 
 type appStreams struct {

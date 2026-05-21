@@ -3,7 +3,7 @@ package tui
 import (
 	"time"
 
-	"github.com/rob/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/sources"
 )
 
 type SourceReader interface {

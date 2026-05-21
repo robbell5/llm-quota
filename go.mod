@@ -1,4 +1,4 @@
-module github.com/rob/llm-quota
+module github.com/robbell5/llm-quota
 
 go 1.26.3
 

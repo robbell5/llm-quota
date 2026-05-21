@@ -11,9 +11,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/rob/llm-quota/internal/install"
-	"github.com/rob/llm-quota/internal/sources"
-	"github.com/rob/llm-quota/internal/tui"
+	"github.com/robbell5/llm-quota/internal/install"
+	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/tui"
 )
 
 func TestRunInstallClaudeHookCommandInstallsWithoutStartingTUI(t *testing.T) {

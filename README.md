@@ -18,7 +18,7 @@ Choose one install path.
 To install `llm-quota` on your `PATH`, run:
 
 ```sh
-go install github.com/rob/llm-quota/cmd/llm-quota@latest
+go install github.com/robbell5/llm-quota/cmd/llm-quota@latest
 llm-quota install-claude-hook
 llm-quota
 ```

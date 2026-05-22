@@ -4,12 +4,12 @@ milestone: v1.1
 milestone_name: UI Polish and Small Features
 status: executing
 stopped_at: Phase 7 planning complete
-last_updated: "2026-05-21T23:46:29.525Z"
-last_activity: 2026-05-21 -- Phase 7 planning complete
+last_updated: "2026-05-21T23:52:36.713Z"
+last_activity: 2026-05-21 -- Phase 07 execution started
 progress:
   total_phases: 3
   completed_phases: 0
-  total_plans: 6
+  total_plans: 2
   completed_plans: 0
   percent: 0
 ---
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Rob can glance at one tmux pane and immediately know how close Claude Code and Codex are to their 5-hour and 7-day limits.
-**Current focus:** v1.1 UI Polish and Small Features
+**Current focus:** Phase 07 — row-alignment-claude-sonnet-limit-and-source-freshness
 
 ## Current Position
 
-Phase: 7 - Row Alignment, Claude Sonnet Limit, and Source Freshness
-Plan: —
-Status: Ready to execute
-Last activity: 2026-05-21 -- Phase 7 planning complete
+Phase: 07 (row-alignment-claude-sonnet-limit-and-source-freshness) — EXECUTING
+Plan: 1 of 2
+Status: Executing Phase 07
+Last activity: 2026-05-21 -- Phase 07 execution started
 
 ## Milestone Summary
 

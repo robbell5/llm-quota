@@ -42,7 +42,7 @@ The v1.1 roadmap improves the shipped local-only quota pane without changing the
 Plans:
 **Wave 1**
 
-- [ ] 07-01-PLAN.md - Add the Claude Sonnet-only weekly row and refactor quota row layout widths, right-column alignment, and compact reset text rendering.
+- [x] 07-01-PLAN.md - Add the Claude Sonnet-only weekly row and refactor quota row layout widths, right-column alignment, and compact reset text rendering.
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
@@ -116,7 +116,7 @@ Phases execute in numeric order: 7 -> 8 -> 9
 | 4. Quota Display and Responsive Rendering | v1.0 | 2/2 | Complete | 2026-05-19 |
 | 5. Install, Docs, and Real-Pane Validation | v1.0 | 2/2 | Complete | 2026-05-20 |
 | 6. Claude Setup Uninstaller | v1.0 | 2/2 | Complete | 2026-05-21 |
-| 7. Row Alignment, Claude Sonnet Limit, and Source Freshness | v1.1 | 0/2 | Planned | - |
+| 7. Row Alignment, Claude Sonnet Limit, and Source Freshness | v1.1 | 1/2 | In Progress|  |
 | 8. Display Preferences | v1.1 | 0/2 | Planned | - |
 | 9. Refresh Animation and Polish Validation | v1.1 | 0/2 | Planned | - |
 

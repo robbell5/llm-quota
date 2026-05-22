@@ -16,7 +16,7 @@ The v1.1 roadmap improves the shipped local-only quota pane without changing the
 - Integer phases continue from the previous milestone.
 - v1.1 starts at Phase 7 because v1.0 shipped Phases 1-6.
 
-- [ ] **Phase 7: Row Alignment, Claude Sonnet Limit, and Source Freshness** - Add the Claude Sonnet-only weekly row, clean up quota row layout, and add one last-refreshed date/time line per source group.
+- [x] **Phase 7: Row Alignment, Claude Sonnet Limit, and Source Freshness** - Add the Claude Sonnet-only weekly row, clean up quota row layout, and add one last-refreshed date/time line per source group. (completed 2026-05-22)
 - [ ] **Phase 8: Display Preferences** - Add solid-bar rendering and Claude-only or Codex-only display controls.
 - [ ] **Phase 9: Refresh Animation and Polish Validation** - Animate refresh transitions and verify the polished pane in tests and real tmux layouts.
 
@@ -46,7 +46,7 @@ Plans:
 
 **Wave 2** *(blocked on Wave 1 completion)*
 
-- [ ] 07-02-PLAN.md - Add source freshness rows and immediate last-known-good refresh-failure hints.
+- [x] 07-02-PLAN.md - Add source freshness rows and immediate last-known-good refresh-failure hints.
 
 **UI hint**: yes
 
@@ -116,7 +116,7 @@ Phases execute in numeric order: 7 -> 8 -> 9
 | 4. Quota Display and Responsive Rendering | v1.0 | 2/2 | Complete | 2026-05-19 |
 | 5. Install, Docs, and Real-Pane Validation | v1.0 | 2/2 | Complete | 2026-05-20 |
 | 6. Claude Setup Uninstaller | v1.0 | 2/2 | Complete | 2026-05-21 |
-| 7. Row Alignment, Claude Sonnet Limit, and Source Freshness | v1.1 | 1/2 | In Progress|  |
+| 7. Row Alignment, Claude Sonnet Limit, and Source Freshness | v1.1 | 2/2 | Complete   | 2026-05-22 |
 | 8. Display Preferences | v1.1 | 0/2 | Planned | - |
 | 9. Refresh Animation and Polish Validation | v1.1 | 0/2 | Planned | - |
 

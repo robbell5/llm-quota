@@ -42,16 +42,23 @@ func (r ClaudeReader) Fetch(now time.Time) ([]Window, error) {
 	}
 	stale := staleAge > time.Hour
 
-	return []Window{
+	windows := []Window{
 		cache.FiveHour.window(WindowFiveHour, "Claude 5h", writtenAt, stale, staleAge),
 		cache.SevenDay.window(WindowSevenDay, "Claude 7d", writtenAt, stale, staleAge),
-	}, nil
+	}
+	if sonnet, ok := cache.validSonnetSevenDay(); ok {
+		windows = append(windows, sonnet.window(WindowSonnetSevenDay, "Sonnet 7d", writtenAt, stale, staleAge))
+	}
+
+	return windows, nil
 }
 
 type claudeCache struct {
-	FiveHour  *claudeCacheWindow `json:"five_hour"`
-	SevenDay  *claudeCacheWindow `json:"seven_day"`
-	WrittenAt *int64             `json:"written_at"`
+	FiveHour       *claudeCacheWindow `json:"five_hour"`
+	SevenDay       *claudeCacheWindow `json:"seven_day"`
+	SonnetSevenDay *claudeCacheWindow `json:"sonnet_seven_day"`
+	SonnetWeekly   *claudeCacheWindow `json:"sonnet_weekly"`
+	WrittenAt      *int64             `json:"written_at"`
 }
 
 func (c claudeCache) validate() error {
@@ -74,6 +81,20 @@ func (c claudeCache) validate() error {
 	}
 
 	return nil
+}
+
+func (c claudeCache) validSonnetSevenDay() (claudeCacheWindow, bool) {
+	for _, window := range []*claudeCacheWindow{c.SonnetSevenDay, c.SonnetWeekly} {
+		if window == nil {
+			continue
+		}
+		if err := window.validate("sonnet_seven_day"); err != nil {
+			continue
+		}
+		return *window, true
+	}
+
+	return claudeCacheWindow{}, false
 }
 
 type claudeCacheWindow struct {

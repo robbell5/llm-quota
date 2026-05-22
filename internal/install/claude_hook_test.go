@@ -2,6 +2,7 @@ package install
 
 import (
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -519,6 +520,54 @@ func TestRunClaudeStatusLineCacheWriterWritesCacheAndPassesThrough(t *testing.T)
 	}
 	if len(windows) != 2 {
 		t.Fatalf("ClaudeReader returned %d windows, want 2: %#v", len(windows), windows)
+	}
+
+	contents, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatalf("read generated cache: %v", err)
+	}
+	var cache map[string]any
+	if err := json.Unmarshal(contents, &cache); err != nil {
+		t.Fatalf("unmarshal generated cache: %v", err)
+	}
+	if _, ok := cache["sonnet_seven_day"]; ok {
+		t.Fatalf("statusline cache without optional Sonnet data should not write sonnet_seven_day: %s", contents)
+	}
+}
+
+func TestRunClaudeStatusLineCacheWriterWritesCanonicalSonnetSevenDay(t *testing.T) {
+	tempDir := t.TempDir()
+	cachePath := filepath.Join(tempDir, "claude.json")
+	input := strings.NewReader(`{"rate_limits":{"five_hour":{"used_percentage":42.3,"resets_at":1778942485},"seven_day":{"used_percentage":85.7,"resets_at":1779382265},"sonnet_weekly":{"used_percentage":91.2,"resets_at":1779382265}}}`)
+
+	if err := RunClaudeStatusLineCacheWriter(input, io.Discard, io.Discard, cachePath, "", time.Unix(1778930000, 0)); err != nil {
+		t.Fatalf("RunClaudeStatusLineCacheWriter returned error: %v", err)
+	}
+
+	contents, err := os.ReadFile(cachePath)
+	if err != nil {
+		t.Fatalf("read generated cache: %v", err)
+	}
+	var cache map[string]any
+	if err := json.Unmarshal(contents, &cache); err != nil {
+		t.Fatalf("unmarshal generated cache: %v", err)
+	}
+	if got, want := sortedKeys(cache), []string{"five_hour", "seven_day", "sonnet_seven_day", "written_at"}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("generated cache top-level keys = %v, want %v; cache=%s", got, want, contents)
+	}
+	if _, ok := cache["sonnet_weekly"]; ok {
+		t.Fatalf("generated cache should write canonical key only, got %s", contents)
+	}
+
+	windows, err := sources.NewClaudeReader(cachePath).Fetch(time.Unix(1778930000, 0))
+	if err != nil {
+		t.Fatalf("ClaudeReader could not read generated statusline cache: %v", err)
+	}
+	if len(windows) != 3 {
+		t.Fatalf("ClaudeReader returned %d windows, want 3: %#v", len(windows), windows)
+	}
+	if windows[2].Kind != sources.WindowSonnetSevenDay || windows[2].Label != "Sonnet 7d" {
+		t.Fatalf("third ClaudeReader window = %#v, want Sonnet 7d", windows[2])
 	}
 }
 

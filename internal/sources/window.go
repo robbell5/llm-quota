@@ -12,8 +12,9 @@ const (
 type WindowKind string
 
 const (
-	WindowFiveHour WindowKind = "five_hour"
-	WindowSevenDay WindowKind = "seven_day"
+	WindowFiveHour       WindowKind = "five_hour"
+	WindowSevenDay       WindowKind = "seven_day"
+	WindowSonnetSevenDay WindowKind = "sonnet_seven_day"
 )
 
 type Metadata map[string]string

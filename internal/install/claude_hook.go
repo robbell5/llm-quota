@@ -317,9 +317,10 @@ func writeClaudeCache(contents []byte, cachePath string, now time.Time, requireR
 
 	writtenAt := now.Unix()
 	cache := claudeHookCache{
-		FiveHour:  rateLimits.FiveHour,
-		SevenDay:  rateLimits.SevenDay,
-		WrittenAt: &writtenAt,
+		FiveHour:       rateLimits.FiveHour,
+		SevenDay:       rateLimits.SevenDay,
+		SonnetSevenDay: rateLimits.validSonnetSevenDay(),
+		WrittenAt:      &writtenAt,
 	}
 	return writeJSONAtomic(cachePath, cache)
 }
@@ -332,14 +333,17 @@ type claudeHookPayload struct {
 }
 
 type claudeHookCache struct {
-	FiveHour  *claudeHookWindow `json:"five_hour"`
-	SevenDay  *claudeHookWindow `json:"seven_day"`
-	WrittenAt *int64            `json:"written_at"`
+	FiveHour       *claudeHookWindow `json:"five_hour"`
+	SevenDay       *claudeHookWindow `json:"seven_day"`
+	SonnetSevenDay *claudeHookWindow `json:"sonnet_seven_day,omitempty"`
+	WrittenAt      *int64            `json:"written_at"`
 }
 
 type claudeHookRateLimits struct {
-	FiveHour *claudeHookWindow `json:"five_hour"`
-	SevenDay *claudeHookWindow `json:"seven_day"`
+	FiveHour       *claudeHookWindow `json:"five_hour"`
+	SevenDay       *claudeHookWindow `json:"seven_day"`
+	SonnetSevenDay *claudeHookWindow `json:"sonnet_seven_day"`
+	SonnetWeekly   *claudeHookWindow `json:"sonnet_weekly"`
 }
 
 func (r claudeHookRateLimits) validate() error {
@@ -355,6 +359,20 @@ func (r claudeHookRateLimits) validate() error {
 	if err := r.SevenDay.validate("seven_day"); err != nil {
 		return err
 	}
+	return nil
+}
+
+func (r claudeHookRateLimits) validSonnetSevenDay() *claudeHookWindow {
+	for _, window := range []*claudeHookWindow{r.SonnetSevenDay, r.SonnetWeekly} {
+		if window == nil {
+			continue
+		}
+		if err := window.validate("sonnet_seven_day"); err != nil {
+			continue
+		}
+		return window
+	}
+
 	return nil
 }
 

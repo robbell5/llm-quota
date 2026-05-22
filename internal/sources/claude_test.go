@@ -47,6 +47,106 @@ func TestClaudeFetch(t *testing.T) {
 			},
 		},
 		{
+			name:       "valid cache with sonnet seven day",
+			writeCache: true,
+			cache: `{
+				"five_hour": {"used_percentage": 42.3, "resets_at": 1778942485},
+				"seven_day": {"used_percentage": 85.7, "resets_at": 1779382265},
+				"sonnet_seven_day": {"used_percentage": 91.2, "resets_at": 1779382265},
+				"written_at": 1778940000
+			}`,
+			wantWindows: []Window{
+				{
+					Product:     ProductClaude,
+					Kind:        WindowFiveHour,
+					Label:       "Claude 5h",
+					UsedPercent: 42.3,
+					ResetsAt:    time.Unix(1_778_942_485, 0),
+					CapturedAt:  now,
+				},
+				{
+					Product:     ProductClaude,
+					Kind:        WindowSevenDay,
+					Label:       "Claude 7d",
+					UsedPercent: 85.7,
+					ResetsAt:    time.Unix(1_779_382_265, 0),
+					CapturedAt:  now,
+				},
+				{
+					Product:     ProductClaude,
+					Kind:        WindowSonnetSevenDay,
+					Label:       "Sonnet 7d",
+					UsedPercent: 91.2,
+					ResetsAt:    time.Unix(1_779_382_265, 0),
+					CapturedAt:  now,
+				},
+			},
+		},
+		{
+			name:       "valid cache with sonnet weekly alias",
+			writeCache: true,
+			cache: `{
+				"five_hour": {"used_percentage": 42.3, "resets_at": 1778942485},
+				"seven_day": {"used_percentage": 85.7, "resets_at": 1779382265},
+				"sonnet_weekly": {"used_percentage": 64.5, "resets_at": 1779382265},
+				"written_at": 1778940000
+			}`,
+			wantWindows: []Window{
+				{
+					Product:     ProductClaude,
+					Kind:        WindowFiveHour,
+					Label:       "Claude 5h",
+					UsedPercent: 42.3,
+					ResetsAt:    time.Unix(1_778_942_485, 0),
+					CapturedAt:  now,
+				},
+				{
+					Product:     ProductClaude,
+					Kind:        WindowSevenDay,
+					Label:       "Claude 7d",
+					UsedPercent: 85.7,
+					ResetsAt:    time.Unix(1_779_382_265, 0),
+					CapturedAt:  now,
+				},
+				{
+					Product:     ProductClaude,
+					Kind:        WindowSonnetSevenDay,
+					Label:       "Sonnet 7d",
+					UsedPercent: 64.5,
+					ResetsAt:    time.Unix(1_779_382_265, 0),
+					CapturedAt:  now,
+				},
+			},
+		},
+		{
+			name:       "malformed optional sonnet data is ignored",
+			writeCache: true,
+			cache: `{
+				"five_hour": {"used_percentage": 42.3, "resets_at": 1778942485},
+				"seven_day": {"used_percentage": 85.7, "resets_at": 1779382265},
+				"sonnet_seven_day": {"used_percentage": 91.2},
+				"written_at": 1778940000
+			}`,
+			wantWindows: []Window{
+				{
+					Product:     ProductClaude,
+					Kind:        WindowFiveHour,
+					Label:       "Claude 5h",
+					UsedPercent: 42.3,
+					ResetsAt:    time.Unix(1_778_942_485, 0),
+					CapturedAt:  now,
+				},
+				{
+					Product:     ProductClaude,
+					Kind:        WindowSevenDay,
+					Label:       "Claude 7d",
+					UsedPercent: 85.7,
+					ResetsAt:    time.Unix(1_779_382_265, 0),
+					CapturedAt:  now,
+				},
+			},
+		},
+		{
 			name:         "missing cache",
 			wantCategory: ErrorMissing,
 		},

@@ -2,15 +2,15 @@
 gsd_state_version: 1.0
 milestone: v1.1
 milestone_name: UI Polish and Small Features
-status: executing
-stopped_at: Phase 7 planning complete
-last_updated: "2026-05-21T23:52:36.713Z"
+status: ready_to_plan
+stopped_at: Phase 07 complete (2/2) — ready to discuss Phase 8
+last_updated: 2026-05-22T19:41:08.478Z
 last_activity: 2026-05-21 -- Phase 07 execution started
 progress:
   total_phases: 3
   completed_phases: 0
   total_plans: 2
-  completed_plans: 0
+  completed_plans: 2
   percent: 0
 ---
 
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-05-21)
 
 **Core value:** Rob can glance at one tmux pane and immediately know how close Claude Code and Codex are to their 5-hour and 7-day limits.
-**Current focus:** Phase 07 — row-alignment-claude-sonnet-limit-and-source-freshness
+**Current focus:** Phase 8 — display preferences
 
 ## Current Position
 
-Phase: 07 (row-alignment-claude-sonnet-limit-and-source-freshness) — EXECUTING
-Plan: 1 of 2
-Status: Executing Phase 07
-Last activity: 2026-05-21 -- Phase 07 execution started
+Phase: 8
+Plan: Not started
+Status: Ready to plan
+Last activity: 2026-05-22
 
 ## Milestone Summary
 

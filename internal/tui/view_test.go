@@ -20,7 +20,7 @@ func TestRenderStartupScreen(t *testing.T) {
 		t.Fatalf("expected title in startup screen, got:\n%s", full)
 	}
 
-	for _, label := range []string{"Claude 5h", "Claude 7d", "Codex 5h", "Codex 7d"} {
+	for _, label := range []string{"Claude 5h", "Claude 7d", "Sonnet 7d", "Codex 5h", "Codex 7d"} {
 		if count := strings.Count(full, label); count != 1 {
 			t.Fatalf("expected row label %q exactly once, got %d in:\n%s", label, count, full)
 		}
@@ -57,7 +57,7 @@ func TestRenderStartupScreen(t *testing.T) {
 		t.Fatalf("compact footer should avoid source hints that wrap:\n%s", compact)
 	}
 
-	for _, width := range []int{50, 49, 29} {
+	for _, width := range []int{80, 50, 49, 30, 29, 20} {
 		assertRenderedLineWidths(t, render(Model{width: width, height: 12}), width)
 	}
 }
@@ -78,6 +78,14 @@ func TestRenderSourceBackedRows(t *testing.T) {
 			Stale:       true,
 			StaleAge:    2 * time.Hour,
 		},
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowSonnetSevenDay,
+			Label:       "Sonnet 7d",
+			UsedPercent: 91,
+			ResetsAt:    now.Add(21*time.Hour + time.Minute),
+			CapturedAt:  now,
+		},
 	}
 	model.windows[sources.ProductCodex] = []sources.Window{
 		{
@@ -92,7 +100,7 @@ func TestRenderSourceBackedRows(t *testing.T) {
 
 	rendered := render(model)
 	plain := ansiEscapeRE.ReplaceAllString(rendered, "")
-	for _, want := range []string{"Claude 5h", "42%", "Codex 7d", "17%"} {
+	for _, want := range []string{"Claude 5h", "42%", "Sonnet 7d", "91%", "21h 1m", "Codex 7d", "17%"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("expected rendered source-backed rows to contain %q, got:\n%s", want, plain)
 		}
@@ -108,6 +116,65 @@ func TestRenderSourceBackedRows(t *testing.T) {
 	for _, forbidden := range []string{"malformed", "read_error", "no_usable_event"} {
 		if strings.Contains(strings.ToLower(plain), forbidden) {
 			t.Fatalf("render output should not expose raw error category %q:\n%s", forbidden, plain)
+		}
+	}
+}
+
+func TestRenderNormalQuotaRowsAlignRightColumns(t *testing.T) {
+	fixedNow := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	model := NewModel(WithClock(func() time.Time { return fixedNow }))
+	model.width = 80
+	model.height = 12
+	model.windows[sources.ProductClaude] = []sources.Window{
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowFiveHour,
+			Label:       "Claude 5h",
+			UsedPercent: 0,
+			ResetsAt:    fixedNow.Add(54 * time.Minute),
+			CapturedAt:  fixedNow,
+		},
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowSevenDay,
+			Label:       "Claude 7d",
+			UsedPercent: 100,
+			ResetsAt:    fixedNow.Add(21*time.Hour + time.Minute),
+			CapturedAt:  fixedNow,
+		},
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowSonnetSevenDay,
+			Label:       "Sonnet 7d",
+			UsedPercent: 64,
+			ResetsAt:    fixedNow.Add(4*24*time.Hour + 6*time.Hour),
+			CapturedAt:  fixedNow,
+		},
+	}
+
+	plain := ansiEscapeRE.ReplaceAllString(render(model), "")
+	lines := quotaLines(plain)
+	if len(lines) < 3 {
+		t.Fatalf("expected at least three quota lines, got:\n%s", plain)
+	}
+
+	percentColumnEnd := strings.Index(lines[0], "0%") + len("0%")
+	resetColumn := strings.Index(lines[0], "0h 54m")
+	if percentColumnEnd < len("0%") || resetColumn < 0 {
+		t.Fatalf("could not locate percent/reset columns in first line: %q", lines[0])
+	}
+	for _, line := range lines[:3] {
+		if got := firstPercentEnd(line); got != percentColumnEnd {
+			t.Fatalf("percent column end = %d, want %d in line %q", got, percentColumnEnd, line)
+		}
+		if got := firstResetIndex(line); got != resetColumn {
+			t.Fatalf("reset column = %d, want %d in line %q", got, resetColumn, line)
+		}
+	}
+
+	for _, want := range []string{"0h 54m", "21h 1m", "100%"} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected aligned output to contain %q, got:\n%s", want, plain)
 		}
 	}
 }
@@ -319,4 +386,38 @@ func assertRenderedLineWidths(t *testing.T, rendered string, maxWidth int) {
 			t.Fatalf("line %d width = %d, want <= %d: %q", lineNumber+1, width, maxWidth, plain)
 		}
 	}
+}
+
+func quotaLines(plain string) []string {
+	lines := make([]string, 0, 5)
+	for _, line := range strings.Split(plain, "\n") {
+		trimmed := strings.TrimSpace(line)
+		for _, label := range []string{"Claude 5h", "Claude 7d", "Sonnet 7d", "Codex 5h", "Codex 7d"} {
+			if strings.HasPrefix(trimmed, label) {
+				lines = append(lines, strings.TrimRight(line, " "))
+				break
+			}
+		}
+	}
+	return lines
+}
+
+func firstPercentEnd(line string) int {
+	best := -1
+	for _, marker := range []string{"0%", "100%", "64%"} {
+		if idx := strings.Index(line, marker); idx >= 0 && (best == -1 || idx < best) {
+			best = idx + len(marker)
+		}
+	}
+	return best
+}
+
+func firstResetIndex(line string) int {
+	best := -1
+	for _, marker := range []string{"0h 54m", "21h 1m", "4d 06h"} {
+		if idx := strings.Index(line, marker); idx >= 0 && (best == -1 || idx < best) {
+			best = idx
+		}
+	}
+	return best
 }

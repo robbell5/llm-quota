@@ -45,8 +45,28 @@ var (
 const (
 	fullRowLabelWidth  = 9
 	shortRowLabelWidth = 5
+	normalPercentWidth = 4
+	normalResetWidth   = 7
+	compactResetWidth  = 4
+	normalGap          = "  "
+	compactGap         = " "
 	minProgressWidth   = 6
 )
+
+type quotaRowSpec struct {
+	full    string
+	short   string
+	product sources.Product
+	kind    sources.WindowKind
+}
+
+var quotaRowSpecs = []quotaRowSpec{
+	{full: "Claude 5h", short: "Cl 5h", product: sources.ProductClaude, kind: sources.WindowFiveHour},
+	{full: "Claude 7d", short: "Cl 7d", product: sources.ProductClaude, kind: sources.WindowSevenDay},
+	{full: "Sonnet 7d", short: "Sn 7d", product: sources.ProductClaude, kind: sources.WindowSonnetSevenDay},
+	{full: "Codex 5h", short: "Cx 5h", product: sources.ProductCodex, kind: sources.WindowFiveHour},
+	{full: "Codex 7d", short: "Cx 7d", product: sources.ProductCodex, kind: sources.WindowSevenDay},
+}
 
 func render(m Model) string {
 	width := m.width
@@ -70,52 +90,18 @@ func render(m Model) string {
 }
 
 func renderRows(m Model, width int) string {
-	rows := make([]string, 0, 4)
-	rowLabels := []struct {
-		full    string
-		short   string
-		product sources.Product
-		kind    sources.WindowKind
-	}{
-		{full: "Claude 5h", short: "Cl 5h", product: sources.ProductClaude, kind: sources.WindowFiveHour},
-		{full: "Claude 7d", short: "Cl 7d", product: sources.ProductClaude, kind: sources.WindowSevenDay},
-		{full: "Codex 5h", short: "Cx 5h", product: sources.ProductCodex, kind: sources.WindowFiveHour},
-		{full: "Codex 7d", short: "Cx 7d", product: sources.ProductCodex, kind: sources.WindowSevenDay},
-	}
+	rows := make([]string, 0, len(quotaRowSpecs))
 	now := time.Now
 	if m.now != nil {
 		now = m.now
 	}
 
-	for _, label := range rowLabels {
-		if window, ok := findWindow(m, label.product, label.kind); ok {
-			rows = append(rows, renderDataRow(label.full, label.short, window, now(), width))
+	for _, spec := range quotaRowSpecs {
+		if window, ok := findWindow(m, spec.product, spec.kind); ok {
+			rows = append(rows, renderDataRow(spec.full, spec.short, window, now(), width))
 			continue
 		}
-
-		switch {
-		case width >= 46:
-			rows = append(rows, fmt.Sprintf(
-				"%s  %s  %s  reset %s",
-				labelStyle.Render(fmt.Sprintf("%-9s", label.full)),
-				missingStyle.Render("—"),
-				hintStyle.Render("missing local data"),
-				missingStyle.Render("—"),
-			))
-		case width >= 26:
-			rows = append(rows, fmt.Sprintf(
-				"%s  %s  %s",
-				labelStyle.Render(fmt.Sprintf("%-5s", label.short)),
-				missingStyle.Render("—"),
-				hintStyle.Render("pending"),
-			))
-		default:
-			rows = append(rows, fmt.Sprintf(
-				"%s %s",
-				labelStyle.Render(fmt.Sprintf("%-5s", label.short)),
-				missingStyle.Render("—"),
-			))
-		}
+		rows = append(rows, renderMissingRow(spec.full, spec.short, width))
 	}
 
 	return strings.Join(rows, "\n")
@@ -132,54 +118,122 @@ func findWindow(m Model, product sources.Product, kind sources.WindowKind) (sour
 }
 
 func renderDataRow(fullLabel string, shortLabel string, window sources.Window, now time.Time, width int) string {
-	percent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent)))
+	percentText := fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))
+	percent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(formatCell(percentText, normalPercentWidth, true))
 	reset := resetText(window.ResetsAt, now)
 
 	switch {
 	case width >= 46:
-		barWidth := width - fullRowLabelWidth - lipgloss.Width(fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))) - lipgloss.Width(reset) - 6
-		if barWidth < minProgressWidth {
-			barWidth = minProgressWidth
-		}
+		barWidth := width - fullRowLabelWidth - normalPercentWidth - normalResetWidth - 3*len(normalGap)
 
 		return fmt.Sprintf(
 			"%s  %s  %s  %s",
-			labelStyle.Render(fmt.Sprintf("%-9s", fullLabel)),
+			labelStyle.Render(formatCell(fullLabel, fullRowLabelWidth, false)),
 			renderProgressBar(window.UsedPercent, barWidth),
 			percent,
-			reset,
+			formatCell(reset, normalResetWidth, true),
 		)
 	case width >= 26:
-		barWidth := width - shortRowLabelWidth - lipgloss.Width(fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))) - lipgloss.Width(reset) - 3
+		compactReset := compactResetText(window.ResetsAt, now)
+		compactPercent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(formatCell(percentText, normalPercentWidth, true))
+		barWidth := width - shortRowLabelWidth - normalPercentWidth - compactResetWidth - 3*len(compactGap)
 		if barWidth >= minProgressWidth {
 			return fmt.Sprintf(
 				"%s %s %s %s",
-				labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)),
+				labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
 				renderProgressBar(window.UsedPercent, barWidth),
-				percent,
-				reset,
+				compactPercent,
+				formatCell(compactReset, compactResetWidth, true),
 			)
 		}
 
 		return fmt.Sprintf(
 			"%s  %s  %s",
-			labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)),
-			percent,
-			reset,
+			labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
+			compactPercent,
+			formatCell(compactReset, compactResetWidth, true),
 		)
 	default:
+		compactReset := compactResetText(window.ResetsAt, now)
+		compactPercent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(formatCell(percentText, normalPercentWidth, true))
 		withReset := fmt.Sprintf(
 			"%s %s %s",
-			labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)),
-			percent,
-			reset,
+			labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
+			compactPercent,
+			formatCell(compactReset, compactResetWidth, true),
 		)
 		if lipgloss.Width(withReset) <= width {
 			return withReset
 		}
 
-		return fmt.Sprintf("%s %s", labelStyle.Render(fmt.Sprintf("%-5s", shortLabel)), percent)
+		return fmt.Sprintf("%s %s", labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)), compactPercent)
 	}
+}
+
+func renderMissingRow(fullLabel string, shortLabel string, width int) string {
+	percent := missingStyle.Render(formatCell("—", normalPercentWidth, true))
+	reset := missingStyle.Render(formatCell("—", normalResetWidth, true))
+
+	switch {
+	case width >= 46:
+		barWidth := width - fullRowLabelWidth - normalPercentWidth - normalResetWidth - 3*len(normalGap)
+		barText := formatCell("missing local data", barWidth, false)
+		return fmt.Sprintf(
+			"%s  %s  %s  %s",
+			labelStyle.Render(formatCell(fullLabel, fullRowLabelWidth, false)),
+			hintStyle.Render(barText),
+			percent,
+			reset,
+		)
+	case width >= 26:
+		compactReset := missingStyle.Render(formatCell("—", compactResetWidth, true))
+		barWidth := width - shortRowLabelWidth - normalPercentWidth - compactResetWidth - 3*len(compactGap)
+		if barWidth >= minProgressWidth {
+			return fmt.Sprintf(
+				"%s %s %s %s",
+				labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
+				hintStyle.Render(formatCell("pending", barWidth, false)),
+				percent,
+				compactReset,
+			)
+		}
+
+		return fmt.Sprintf(
+			"%s  %s  %s",
+			labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
+			percent,
+			compactReset,
+		)
+	default:
+		withReset := fmt.Sprintf(
+			"%s %s %s",
+			labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
+			percent,
+			missingStyle.Render(formatCell("—", compactResetWidth, true)),
+		)
+		if lipgloss.Width(withReset) <= width {
+			return withReset
+		}
+
+		return fmt.Sprintf("%s %s", labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)), percent)
+	}
+}
+
+func formatCell(value string, width int, alignRight bool) string {
+	if width <= 0 {
+		return ""
+	}
+	for lipgloss.Width(value) > width && len(value) > 0 {
+		value = value[:len(value)-1]
+	}
+	padding := width - lipgloss.Width(value)
+	if padding <= 0 {
+		return value
+	}
+	if alignRight {
+		return strings.Repeat(" ", padding) + value
+	}
+	return value + strings.Repeat(" ", padding)
 }
 
 func thresholdColor(percent float64) color.Color {
@@ -216,7 +270,7 @@ func renderProgressBar(percent float64, width int) string {
 
 func resetText(resetsAt time.Time, now time.Time) string {
 	if resetsAt.IsZero() {
-		return missingStyle.Render("—")
+		return "—"
 	}
 
 	remaining := resetsAt.Sub(now)
@@ -234,6 +288,26 @@ func resetText(resetsAt time.Time, now time.Time) string {
 	hours := totalMinutes / int(time.Hour/time.Minute)
 	minutes := totalMinutes % int(time.Hour/time.Minute)
 	return fmt.Sprintf("%dh %dm", hours, minutes)
+}
+
+func compactResetText(resetsAt time.Time, now time.Time) string {
+	if resetsAt.IsZero() {
+		return "—"
+	}
+
+	remaining := resetsAt.Sub(now)
+	if remaining <= 0 {
+		return "now"
+	}
+
+	totalMinutes := int(remaining / time.Minute)
+	if remaining >= 24*time.Hour {
+		days := totalMinutes / int((24 * time.Hour / time.Minute))
+		return fmt.Sprintf("%dd", days)
+	}
+
+	hours := totalMinutes / int(time.Hour/time.Minute)
+	return fmt.Sprintf("%dh", hours)
 }
 
 func renderFooter(m Model, innerWidth int) string {

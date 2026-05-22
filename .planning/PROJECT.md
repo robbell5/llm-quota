@@ -16,6 +16,8 @@ Rob can glance at one tmux pane and immediately know how close Claude Code and C
 
 v1.0 is requirement-complete and archived. The milestone audit status is `tech_debt`: all 27 v1 requirements and all 6 phases are satisfied, with warning-level follow-up items recorded for later prioritization.
 
+Phase 7 of v1.1 is complete: the quota view now has fixed right-column alignment, a persistent Claude Sonnet weekly row/placeholder, source freshness lines under Claude and Codex groups, and concise source-level `refresh failed` status for preserved last-known-good rows.
+
 **Archive:**
 
 - [v1.0 roadmap archive](milestones/v1.0-ROADMAP.md)
@@ -47,11 +49,10 @@ v1.0 is requirement-complete and archived. The milestone audit status is `tech_d
 - Phase 04 validated all four quota rows, threshold progress bars, reset countdowns, missing/stale hints, and responsive layouts.
 - Phase 05 validated install/setup/troubleshooting documentation and real tmux-pane operation.
 - Phase 06 validated safe Claude setup uninstall/reinstall behavior that preserves unrelated Claude settings and cache/state files.
+- Phase 07 validated row alignment, Claude Sonnet-only weekly quota support, source freshness lines, compact/very narrow width behavior, and source-level refresh-failure hints.
 
 ### Active
 
-- Improve row alignment, source freshness display, and narrow-pane rendering polish for the quota view.
-- Add the Claude Sonnet-only weekly limit as an additional Claude quota row when available.
 - Add small display preferences for solid bars and Claude-only or Codex-only views.
 - Add refresh animations that communicate updates without distracting from the tmux-pane use case.
 - Update tests and documentation so the new display behavior is deterministic and discoverable.
@@ -102,8 +103,8 @@ The TUI should never crash because quota data is missing, stale, or malformed. O
 | Use Claude statusline wrapper for quota cache capture | Real validation showed quota `rate_limits` are available to the statusline command, not the earlier PostToolUse hook path. | Validated in Phase 05 |
 | Preserve symlinked Claude settings during install | Rob's settings are dotfiles-managed; installer writes must update the target without replacing the symlink. | Validated in Phase 05 |
 | Provide a safe Claude setup uninstaller | Users need a reversible setup flow that removes only app-owned configuration and leaves local cache/state files intact. | Validated in Phase 06 |
-| Keep v1.1 focused on UI polish and small preferences | The v1.0 data-source model works; this milestone should make the pane easier to read and tailor without adding provider complexity. | Pending |
-| Add Claude Sonnet-only weekly limit as a targeted row | Rob specifically wants the known Claude weekly Sonnet cap visible, while broad per-model breakdowns remain out of scope. | Pending |
+| Keep v1.1 focused on UI polish and small preferences | The v1.0 data-source model works; this milestone should make the pane easier to read and tailor without adding provider complexity. | In progress; Phase 7 complete |
+| Add Claude Sonnet-only weekly limit as a targeted row | Rob specifically wants the known Claude weekly Sonnet cap visible, while broad per-model breakdowns remain out of scope. | Validated in Phase 07 |
 
 ## Evolution
 
@@ -126,4 +127,4 @@ This document evolves at phase transitions and milestone boundaries.
 
 ---
 
-*Last updated: 2026-05-21 after starting v1.1 milestone*
+*Last updated: 2026-05-22 after completing Phase 07*

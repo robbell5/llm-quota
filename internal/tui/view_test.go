@@ -109,8 +109,11 @@ func TestRenderSourceBackedRows(t *testing.T) {
 		t.Fatalf("stale-but-valid Claude data should render as data, not placeholder:\n%s", plain)
 	}
 
-	if !strings.Contains(plain, "Claude data 2h old; open Claude") {
-		t.Fatalf("expected stale Claude footer hint in source-backed output, got:\n%s", plain)
+	if !strings.Contains(plain, "Claude updated") {
+		t.Fatalf("expected Claude freshness line in source-backed output, got:\n%s", plain)
+	}
+	if strings.Contains(plain, "Claude data 2h old; open Claude") {
+		t.Fatalf("source-backed stale Claude output should not duplicate stale status in footer:\n%s", plain)
 	}
 
 	for _, forbidden := range []string{"malformed", "read_error", "no_usable_event"} {
@@ -242,9 +245,102 @@ func TestRenderMissingAndStaleFooterHints(t *testing.T) {
 		},
 	}
 	plain = ansiEscapeRE.ReplaceAllString(render(staleClaude), "")
-	for _, want := range []string{"Claude 5h", "42%", "Claude data 2h old; open Claude"} {
+	for _, want := range []string{"Claude 5h", "42%", "Claude updated"} {
 		if !strings.Contains(plain, want) {
 			t.Fatalf("expected stale-but-valid Claude output to contain %q, got:\n%s", want, plain)
+		}
+	}
+	if strings.Contains(plain, "Claude data 2h old; open Claude") {
+		t.Fatalf("stale-but-valid Claude output should carry stale status on freshness line, not footer:\n%s", plain)
+	}
+}
+
+func TestRenderSourceFreshnessLines(t *testing.T) {
+	now := time.Date(2026, 5, 19, 14, 17, 0, 0, time.Local)
+	captured := time.Date(2026, 5, 19, 14, 14, 0, 0, time.Local)
+	model := NewModel(WithClock(func() time.Time { return now }))
+	model.width = 80
+	model.height = 12
+	model.windows[sources.ProductClaude] = []sources.Window{
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowFiveHour,
+			Label:       "Claude 5h",
+			UsedPercent: 42,
+			ResetsAt:    now.Add(2 * time.Hour),
+			CapturedAt:  captured,
+		},
+	}
+	model.windows[sources.ProductCodex] = []sources.Window{
+		{
+			Product:     sources.ProductCodex,
+			Kind:        sources.WindowSevenDay,
+			Label:       "Codex 7d",
+			UsedPercent: 18,
+			ResetsAt:    now.Add(2 * time.Hour),
+			CapturedAt:  captured,
+		},
+	}
+
+	plain := ansiEscapeRE.ReplaceAllString(render(model), "")
+	for _, want := range []string{
+		"Claude updated 2:14 PM (3m ago)",
+		"Codex updated 2:14 PM (3m ago)",
+	} {
+		if !strings.Contains(plain, want) {
+			t.Fatalf("expected freshness line %q, got:\n%s", want, plain)
+		}
+	}
+	assertLineOrder(t, plain, "Sonnet 7d", "Claude updated 2:14 PM")
+	assertLineOrder(t, plain, "Codex 7d", "Codex updated 2:14 PM")
+
+	for _, width := range []int{49, 30, 20} {
+		model.width = width
+		plain = ansiEscapeRE.ReplaceAllString(render(model), "")
+		assertRenderedLineWidths(t, render(model), width)
+		switch width {
+		case 49, 30:
+			if !strings.Contains(plain, "Claude 2:14 PM") || !strings.Contains(plain, "Codex 2:14 PM") {
+				t.Fatalf("width %d: expected compact freshness labels, got:\n%s", width, plain)
+			}
+		case 20:
+			if !strings.Contains(plain, "Cl 2:14") || !strings.Contains(plain, "Cx 2:14") {
+				t.Fatalf("width %d: expected very narrow freshness labels, got:\n%s", width, plain)
+			}
+		}
+	}
+}
+
+func TestRenderRefreshFailureOnFreshnessLine(t *testing.T) {
+	now := time.Date(2026, 5, 19, 16, 14, 0, 0, time.Local)
+	captured := time.Date(2026, 5, 19, 14, 14, 0, 0, time.Local)
+	model := NewModel(WithClock(func() time.Time { return now }))
+	model.width = 80
+	model.height = 12
+	model.windows[sources.ProductClaude] = []sources.Window{
+		{
+			Product:     sources.ProductClaude,
+			Kind:        sources.WindowFiveHour,
+			Label:       "Claude 5h",
+			UsedPercent: 42,
+			ResetsAt:    now.Add(2 * time.Hour),
+			CapturedAt:  captured,
+			Stale:       true,
+			StaleAge:    2 * time.Hour,
+		},
+	}
+	model.errors[sources.ProductClaude] = sources.SourceError{Source: sources.ProductClaude, Category: sources.ErrorMalformed}
+
+	plain := ansiEscapeRE.ReplaceAllString(render(model), "")
+	if !strings.Contains(plain, "Claude updated 2:14 PM (2h old, refresh failed)") {
+		t.Fatalf("expected combined stale/current-error freshness status, got:\n%s", plain)
+	}
+	if strings.Contains(plain, "Claude data 2h old; open Claude") {
+		t.Fatalf("footer should not duplicate source status when Claude rows exist:\n%s", plain)
+	}
+	for _, forbidden := range []string{"malformed", "read_error", "no_usable_event"} {
+		if strings.Contains(strings.ToLower(plain), forbidden) {
+			t.Fatalf("render output should not expose raw error category %q:\n%s", forbidden, plain)
 		}
 	}
 }
@@ -385,6 +481,19 @@ func assertRenderedLineWidths(t *testing.T, rendered string, maxWidth int) {
 		if width := lipgloss.Width(plain); width > maxWidth {
 			t.Fatalf("line %d width = %d, want <= %d: %q", lineNumber+1, width, maxWidth, plain)
 		}
+	}
+}
+
+func assertLineOrder(t *testing.T, plain string, before string, after string) {
+	t.Helper()
+
+	beforeIndex := strings.Index(plain, before)
+	afterIndex := strings.Index(plain, after)
+	if beforeIndex < 0 || afterIndex < 0 {
+		t.Fatalf("could not find %q before %q in:\n%s", before, after, plain)
+	}
+	if beforeIndex >= afterIndex {
+		t.Fatalf("expected %q before %q in:\n%s", before, after, plain)
 	}
 }
 

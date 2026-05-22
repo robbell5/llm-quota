@@ -90,7 +90,7 @@ func render(m Model) string {
 }
 
 func renderRows(m Model, width int) string {
-	rows := make([]string, 0, len(quotaRowSpecs))
+	rows := make([]string, 0, len(quotaRowSpecs)+2)
 	now := time.Now
 	if m.now != nil {
 		now = m.now
@@ -99,9 +99,20 @@ func renderRows(m Model, width int) string {
 	for _, spec := range quotaRowSpecs {
 		if window, ok := findWindow(m, spec.product, spec.kind); ok {
 			rows = append(rows, renderDataRow(spec.full, spec.short, window, now(), width))
-			continue
+		} else {
+			rows = append(rows, renderMissingRow(spec.full, spec.short, width))
 		}
-		rows = append(rows, renderMissingRow(spec.full, spec.short, width))
+
+		if spec.kind == sources.WindowSonnetSevenDay {
+			if line, ok := renderFreshnessLine(m, sources.ProductClaude, "Claude", "Cl", now(), width); ok {
+				rows = append(rows, line)
+			}
+		}
+		if spec.product == sources.ProductCodex && spec.kind == sources.WindowSevenDay {
+			if line, ok := renderFreshnessLine(m, sources.ProductCodex, "Codex", "Cx", now(), width); ok {
+				rows = append(rows, line)
+			}
+		}
 	}
 
 	return strings.Join(rows, "\n")
@@ -310,6 +321,102 @@ func compactResetText(resetsAt time.Time, now time.Time) string {
 	return fmt.Sprintf("%dh", hours)
 }
 
+func renderFreshnessLine(m Model, product sources.Product, fullLabel string, shortLabel string, now time.Time, width int) (string, bool) {
+	capturedAt, age, ok := sourceFreshness(m, product, now)
+	if !ok {
+		return "", false
+	}
+
+	statuses := make([]string, 0, 2)
+	if sourceIsStale(m, product, now) {
+		statuses = append(statuses, ageText(age)+" old")
+	} else if age > 0 {
+		statuses = append(statuses, ageText(age)+" ago")
+	}
+	if err, hasError := m.errors[product]; hasError && err.Category != "" {
+		statuses = append(statuses, "refresh failed")
+	}
+
+	timeText := capturedAt.Local().Format("3:04 PM")
+	if width >= 46 {
+		candidates := []string{
+			freshnessText(fullLabel, "updated "+timeText, statuses),
+			freshnessText(fullLabel, "updated "+timeText, nil),
+		}
+		return renderFirstFittingFreshness(candidates, width)
+	}
+	if width >= 26 {
+		candidates := []string{
+			freshnessText(fullLabel, timeText, statuses),
+			freshnessText(fullLabel, timeText, nil),
+			freshnessText(shortLabel, timeText, nil),
+		}
+		return renderFirstFittingFreshness(candidates, width)
+	}
+
+	veryShortTime := capturedAt.Local().Format("3:04")
+	return renderFirstFittingFreshness([]string{
+		freshnessText(shortLabel, veryShortTime, nil),
+	}, width)
+}
+
+func sourceFreshness(m Model, product sources.Product, now time.Time) (time.Time, time.Duration, bool) {
+	windows := m.windows[product]
+	var capturedAt time.Time
+	var staleAge time.Duration
+	for _, window := range windows {
+		if window.CapturedAt.IsZero() {
+			continue
+		}
+		if capturedAt.IsZero() || window.CapturedAt.After(capturedAt) {
+			capturedAt = window.CapturedAt
+		}
+		if window.StaleAge > staleAge {
+			staleAge = window.StaleAge
+		}
+	}
+	if capturedAt.IsZero() {
+		return time.Time{}, 0, false
+	}
+	age := staleAge
+	if age <= 0 {
+		age = now.Sub(capturedAt)
+	}
+	if age < 0 {
+		age = 0
+	}
+
+	return capturedAt, age, true
+}
+
+func sourceIsStale(m Model, product sources.Product, now time.Time) bool {
+	for _, window := range m.windows[product] {
+		if window.Stale {
+			return true
+		}
+	}
+	_, age, ok := sourceFreshness(m, product, now)
+	return ok && age > m.staleAfter
+}
+
+func freshnessText(label string, updated string, statuses []string) string {
+	text := label + " " + updated
+	if len(statuses) > 0 {
+		text += " (" + strings.Join(statuses, ", ") + ")"
+	}
+	return text
+}
+
+func renderFirstFittingFreshness(candidates []string, width int) (string, bool) {
+	for _, candidate := range candidates {
+		if lipgloss.Width(candidate) <= width {
+			return hintStyle.Render(candidate), true
+		}
+	}
+
+	return "", false
+}
+
 func renderFooter(m Model, innerWidth int) string {
 	hints := footerRecoveryHints(m)
 	if len(hints) == 0 {
@@ -346,40 +453,11 @@ func footerRecoveryHints(m Model) []string {
 		return hints
 	}
 
-	if hint, ok := staleHint(m, sources.ProductClaude, "Claude", "open Claude"); ok {
-		hints = append(hints, hint)
-	}
-	if hint, ok := staleHint(m, sources.ProductCodex, "Codex", "open Codex"); ok {
-		hints = append(hints, hint)
-	}
-
 	return hints
 }
 
 func hasWindows(m Model, product sources.Product) bool {
 	return len(m.windows[product]) > 0
-}
-
-func staleHint(m Model, product sources.Product, label string, action string) (string, bool) {
-	now := time.Now
-	if m.now != nil {
-		now = m.now
-	}
-
-	for _, window := range m.windows[product] {
-		if !window.Stale {
-			continue
-		}
-
-		age := window.StaleAge
-		if age <= 0 && !window.CapturedAt.IsZero() {
-			age = now().Sub(window.CapturedAt)
-		}
-
-		return fmt.Sprintf("%s data %s old; %s", label, ageText(age), action), true
-	}
-
-	return "", false
 }
 
 func ageText(age time.Duration) string {

@@ -26,8 +26,9 @@ type Model struct {
 	errors              map[sources.Product]sources.SourceError
 	claudeHookInstalled bool
 
-	bars  []progress.Model
-	prefs DisplayPrefs
+	bars       []progress.Model
+	barTargets []float64
+	prefs      DisplayPrefs
 }
 
 type Option func(*Model)
@@ -65,12 +66,16 @@ func NewModel(options ...Option) Model {
 	}
 
 	m.bars = make([]progress.Model, len(quotaRowSpecs))
+	m.barTargets = make([]float64, len(quotaRowSpecs))
 	for i := range m.bars {
 		p := progress.New(progress.WithoutPercentage())
 		p.EmptyColor = mochaSurface0
 		// Spring tuning for the Phase 9 animation; harmless until SetPercent is called.
 		p.SetSpringOptions(12.0, 1.0)
 		m.bars[i] = p
+		// -1 sentinel: the first real fraction (0-1) always differs, so the bar
+		// animates from empty on first data.
+		m.barTargets[i] = -1
 	}
 
 	return m

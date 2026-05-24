@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/robbell5/llm-quota/internal/sources"
@@ -353,4 +354,98 @@ func TestTickSchedulesRefreshAndNextTick(t *testing.T) {
 	if updated.(Model).refreshing {
 		t.Fatal("tick should request refresh without marking in-flight until request message is handled")
 	}
+}
+
+func dataResult(product sources.Product, kind sources.WindowKind, percent float64, now time.Time) sourceRefreshResult {
+	return sourceRefreshResult{
+		product: product,
+		windows: []sources.Window{{
+			Product:     product,
+			Kind:        kind,
+			Label:       string(product),
+			UsedPercent: percent,
+			ResetsAt:    now.Add(time.Hour),
+			CapturedAt:  now,
+		}},
+	}
+}
+
+func barIndex(t *testing.T, product sources.Product, kind sources.WindowKind) int {
+	t.Helper()
+	for i, spec := range quotaRowSpecs {
+		if spec.product == product && spec.kind == kind {
+			return i
+		}
+	}
+	t.Fatalf("no row spec for %s/%s", product, kind)
+	return -1
+}
+
+func TestRefreshStartsAnimationForNewData(t *testing.T) {
+	updated, _ := NewModel().Update(refreshMsg{
+		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
+		fetchedAt: fixedNow,
+	})
+	m := updated.(Model)
+	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
+	if !m.bars[i].IsAnimating() {
+		t.Fatal("expected Claude 5h bar to animate from empty toward its target")
+	}
+}
+
+func TestRefreshDoesNotReanimateUnchangedValue(t *testing.T) {
+	first, _ := NewModel().Update(refreshMsg{
+		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
+		fetchedAt: fixedNow,
+	})
+	m := first.(Model)
+	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
+	// Settle the first animation so IsAnimating would only be true again on a change.
+	m.bars[i] = settleBar(m.bars[i])
+
+	second, _ := m.Update(refreshMsg{
+		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow.Add(time.Minute))},
+		fetchedAt: fixedNow.Add(time.Minute),
+	})
+	m2 := second.(Model)
+	if m2.bars[i].IsAnimating() {
+		t.Fatal("expected no re-animation when the value is unchanged")
+	}
+}
+
+func TestMissingRowBarDoesNotAnimate(t *testing.T) {
+	updated, _ := NewModel().Update(refreshMsg{
+		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
+		fetchedAt: fixedNow,
+	})
+	m := updated.(Model)
+	sonnet := barIndex(t, sources.ProductClaude, sources.WindowSonnetSevenDay)
+	if m.bars[sonnet].IsAnimating() {
+		t.Fatal("expected absent Sonnet bar to stay idle")
+	}
+}
+
+func TestWindowSizeDoesNotAnimate(t *testing.T) {
+	updated, _ := NewModel().Update(tea.WindowSizeMsg{Width: 50, Height: 12})
+	m := updated.(Model)
+	for i := range m.bars {
+		if m.bars[i].IsAnimating() {
+			t.Fatalf("bar %d should not animate on resize", i)
+		}
+	}
+}
+
+// settleBar advances a progress bar until it stops animating, feeding it the
+// frame messages its own commands produce (FrameMsg has unexported fields, so
+// we can only obtain valid ones from the bar's own commands).
+func settleBar(b progress.Model) progress.Model {
+	cmd := b.SetPercent(b.Percent())
+	for b.IsAnimating() {
+		msg := cmd()
+		b, cmd = b.Update(msg)
+		if cmd == nil {
+			cmd = b.SetPercent(b.Percent())
+		}
+	}
+	return b
 }

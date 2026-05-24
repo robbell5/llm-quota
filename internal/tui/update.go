@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/sync/errgroup"
 
@@ -61,8 +62,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Batch(requestRefreshCmd(), tickCmd(m.refreshEvery))
 	case refreshMsg:
 		m.refreshing = false
-		m.mergeRefresh(msg)
-		return m, nil
+		cmds := m.mergeRefresh(msg)
+		return m, tea.Batch(cmds...)
+	case progress.FrameMsg:
+		var cmds []tea.Cmd
+		for i := range m.bars {
+			var cmd tea.Cmd
+			m.bars[i], cmd = m.bars[i].Update(msg)
+			if cmd != nil {
+				cmds = append(cmds, cmd)
+			}
+		}
+		return m, tea.Batch(cmds...)
 	}
 
 	return m, nil
@@ -142,7 +153,7 @@ func normalizeSourceError(product sources.Product, err error) sources.SourceErro
 	}
 }
 
-func (m *Model) mergeRefresh(msg refreshMsg) {
+func (m *Model) mergeRefresh(msg refreshMsg) []tea.Cmd {
 	if m.windows == nil {
 		m.windows = make(map[sources.Product][]sources.Window)
 	}
@@ -159,6 +170,24 @@ func (m *Model) mergeRefresh(msg refreshMsg) {
 		m.windows[result.product] = markStale(result.windows, msg.fetchedAt, m.staleAfter)
 		delete(m.errors, result.product)
 	}
+
+	return m.syncBarTargets()
+}
+
+func (m *Model) syncBarTargets() []tea.Cmd {
+	var cmds []tea.Cmd
+	for i, spec := range quotaRowSpecs {
+		window, ok := findWindow(*m, spec.product, spec.kind)
+		if !ok {
+			continue
+		}
+		target := progressFraction(window.UsedPercent)
+		if target != m.barTargets[i] {
+			m.barTargets[i] = target
+			cmds = append(cmds, m.bars[i].SetPercent(target))
+		}
+	}
+	return cmds
 }
 
 func markStale(windows []sources.Window, now time.Time, staleAfter time.Duration) []sources.Window {

@@ -7,4 +7,7 @@ func TestNewModelCreatesOneBarPerRowSpec(t *testing.T) {
 	if len(m.bars) != len(quotaRowSpecs) {
 		t.Fatalf("expected %d bars, got %d", len(quotaRowSpecs), len(m.bars))
 	}
+	if len(m.barTargets) != len(quotaRowSpecs) {
+		t.Fatalf("expected %d bar targets, got %d", len(quotaRowSpecs), len(m.barTargets))
+	}
 }

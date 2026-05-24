@@ -287,6 +287,9 @@ func renderBar(bar progress.Model, percent float64, width int, style BarStyle) s
 	bar.SetWidth(width)
 	bar.FullColor = thresholdColor(percent)
 	bar.Full = fillRune(style)
+	if bar.IsAnimating() {
+		return bar.View()
+	}
 	return bar.ViewAs(progressFraction(percent))
 }
 

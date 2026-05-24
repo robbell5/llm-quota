@@ -630,3 +630,23 @@ func TestVisibilityKeepsLineWidths(t *testing.T) {
 		}
 	}
 }
+
+func TestRenderBarWhileAnimatingIsWidthSafe(t *testing.T) {
+	m := NewModel()
+	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
+	// Kick an animation toward 60% and advance one real frame so the bar is mid-flight.
+	cmd := m.bars[i].SetPercent(0.6)
+	if cmd != nil {
+		m.bars[i], _ = m.bars[i].Update(cmd())
+	}
+	if !m.bars[i].IsAnimating() {
+		t.Skip("spring settled immediately; cannot exercise the animating branch")
+	}
+	// While animating, renderBar takes the View() branch. It must still produce
+	// exactly `width` cells (no overflow/underflow). Assert rune count, not content.
+	const width = 20
+	plain := ansiEscapeRE.ReplaceAllString(renderBar(m.bars[i], 60, width, BarSegmented), "")
+	if got := len([]rune(plain)); got != width {
+		t.Fatalf("animating bar width = %d runes, want %d: %q", got, width, plain)
+	}
+}

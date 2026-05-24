@@ -26,7 +26,8 @@ type Model struct {
 	errors              map[sources.Product]sources.SourceError
 	claudeHookInstalled bool
 
-	bars []progress.Model
+	bars  []progress.Model
+	prefs DisplayPrefs
 }
 
 type Option func(*Model)
@@ -97,5 +98,11 @@ func WithRefreshEvery(interval time.Duration) Option {
 func WithClaudeHookInstalled(installed bool) Option {
 	return func(m *Model) {
 		m.claudeHookInstalled = installed
+	}
+}
+
+func WithDisplayPrefs(prefs DisplayPrefs) Option {
+	return func(m *Model) {
+		m.prefs = prefs
 	}
 }

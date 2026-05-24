@@ -102,7 +102,7 @@ func renderRows(m Model, width int) string {
 			continue // also skips this spec's freshness line, emitted later in the same iteration
 		}
 		if window, ok := findWindow(m, spec.product, spec.kind); ok {
-			rows = append(rows, renderDataRow(spec.full, spec.short, window, m.bars[i], now(), width))
+			rows = append(rows, renderDataRow(spec.full, spec.short, window, m.bars[i], m.prefs.BarStyle, now(), width))
 		} else {
 			rows = append(rows, renderMissingRow(spec.full, spec.short, width))
 		}
@@ -132,7 +132,7 @@ func findWindow(m Model, product sources.Product, kind sources.WindowKind) (sour
 	return sources.Window{}, false
 }
 
-func renderDataRow(fullLabel string, shortLabel string, window sources.Window, bar progress.Model, now time.Time, width int) string {
+func renderDataRow(fullLabel string, shortLabel string, window sources.Window, bar progress.Model, style BarStyle, now time.Time, width int) string {
 	percentText := fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))
 	percent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(formatCell(percentText, normalPercentWidth, true))
 	reset := resetText(window.ResetsAt, now)
@@ -144,7 +144,7 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, b
 		return fmt.Sprintf(
 			"%s  %s  %s  %s",
 			labelStyle.Render(formatCell(fullLabel, fullRowLabelWidth, false)),
-			renderBar(bar, window.UsedPercent, barWidth),
+			renderBar(bar, window.UsedPercent, barWidth, style),
 			percent,
 			formatCell(reset, normalResetWidth, true),
 		)
@@ -156,7 +156,7 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, b
 			return fmt.Sprintf(
 				"%s %s %s %s",
 				labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
-				renderBar(bar, window.UsedPercent, barWidth),
+				renderBar(bar, window.UsedPercent, barWidth, style),
 				compactPercent,
 				formatCell(compactReset, compactResetWidth, true),
 			)
@@ -273,12 +273,20 @@ func progressFraction(percent float64) float64 {
 	return percent / 100
 }
 
-func renderBar(bar progress.Model, percent float64, width int) string {
+func fillRune(style BarStyle) rune {
+	if style == BarSolid {
+		return progress.DefaultFullCharFullBlock
+	}
+	return progress.DefaultFullCharHalfBlock
+}
+
+func renderBar(bar progress.Model, percent float64, width int, style BarStyle) string {
 	if width < 1 {
 		width = 1
 	}
 	bar.SetWidth(width)
 	bar.FullColor = thresholdColor(percent)
+	bar.Full = fillRune(style)
 	return bar.ViewAs(progressFraction(percent))
 }
 

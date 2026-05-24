@@ -592,6 +592,32 @@ func TestVisibilityHidesFreshnessLine(t *testing.T) {
 	}
 }
 
+func TestBarStyleFillRune(t *testing.T) {
+	cases := []struct {
+		name     string
+		style    BarStyle
+		wantRune string
+		denyRune string
+	}{
+		{"segmented", BarSegmented, "▌", "█"},
+		{"solid", BarSolid, "█", "▌"},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m := sampleBothProviders()
+			m.prefs.BarStyle = c.style
+			m.width = 80
+			plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+			if !strings.Contains(plain, c.wantRune) {
+				t.Fatalf("expected fill rune %q, got:\n%s", c.wantRune, plain)
+			}
+			if c.denyRune != "" && strings.Contains(plain, c.denyRune) {
+				t.Fatalf("did not expect rune %q for %s, got:\n%s", c.denyRune, c.name, plain)
+			}
+		})
+	}
+}
+
 func TestVisibilityKeepsLineWidths(t *testing.T) {
 	for _, vis := range []Visibility{VisibilityBoth, VisibilityClaudeOnly, VisibilityCodexOnly} {
 		for _, width := range []int{80, 50, 49, 30, 29, 20} {

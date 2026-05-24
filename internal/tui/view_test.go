@@ -580,16 +580,31 @@ func TestVisibilityFiltersRows(t *testing.T) {
 }
 
 func TestVisibilityHidesFreshnessLine(t *testing.T) {
-	m := sampleBothProviders()
-	m.prefs.Visibility = VisibilityClaudeOnly
-	m.width = 80
-	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
-	if !strings.Contains(plain, "Claude updated") {
-		t.Fatalf("expected Claude freshness line, got:\n%s", plain)
-	}
-	if strings.Contains(plain, "Codex updated") {
-		t.Fatalf("expected no Codex freshness line, got:\n%s", plain)
-	}
+	t.Run("claude only", func(t *testing.T) {
+		m := sampleBothProviders()
+		m.prefs.Visibility = VisibilityClaudeOnly
+		m.width = 80
+		plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+		if !strings.Contains(plain, "Claude updated") {
+			t.Fatalf("expected Claude freshness line, got:\n%s", plain)
+		}
+		if strings.Contains(plain, "Codex updated") {
+			t.Fatalf("expected no Codex freshness line, got:\n%s", plain)
+		}
+	})
+
+	t.Run("codex only", func(t *testing.T) {
+		m := sampleBothProviders()
+		m.prefs.Visibility = VisibilityCodexOnly
+		m.width = 80
+		plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+		if !strings.Contains(plain, "Codex updated") {
+			t.Fatalf("expected Codex freshness line, got:\n%s", plain)
+		}
+		if strings.Contains(plain, "Claude updated") {
+			t.Fatalf("expected no Claude freshness line, got:\n%s", plain)
+		}
+	})
 }
 
 func TestBarStyleFillRune(t *testing.T) {

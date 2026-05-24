@@ -40,6 +40,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			return m, requestRefreshCmd()
+		case "b":
+			m.prefs.BarStyle = m.prefs.BarStyle.toggled()
+			return m, nil
+		case "v":
+			m.prefs.Visibility = m.prefs.Visibility.next()
+			return m, nil
 		}
 	case tea.WindowSizeMsg:
 		m.width = msg.Width

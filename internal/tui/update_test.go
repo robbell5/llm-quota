@@ -314,6 +314,26 @@ func contains(s string, needle string) bool {
 	return strings.Contains(s, needle)
 }
 
+func TestToggleKeys(t *testing.T) {
+	t.Run("b toggles bar style", func(t *testing.T) {
+		updated, cmd := NewModel().Update(tea.KeyPressMsg{Text: "b", Code: 'b'})
+		if cmd != nil {
+			t.Fatalf("expected nil command, got %T", cmd())
+		}
+		if got := updated.(Model).prefs.BarStyle; got != BarSolid {
+			t.Fatalf("expected BarSolid after one toggle, got %v", got)
+		}
+	})
+
+	t.Run("v cycles visibility", func(t *testing.T) {
+		m := NewModel()
+		updated, _ := m.Update(tea.KeyPressMsg{Text: "v", Code: 'v'})
+		if got := updated.(Model).prefs.Visibility; got != VisibilityClaudeOnly {
+			t.Fatalf("expected VisibilityClaudeOnly after one v, got %v", got)
+		}
+	})
+}
+
 func TestTickSchedulesRefreshAndNextTick(t *testing.T) {
 	model := NewModel()
 	updated, cmd := model.Update(tickMsg(fixedNow))

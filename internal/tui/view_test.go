@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -529,4 +530,77 @@ func firstResetIndex(line string) int {
 		}
 	}
 	return best
+}
+
+func sampleBothProviders() Model {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	m := NewModel(WithClock(func() time.Time { return now }))
+	m.height = 12
+	m.windows[sources.ProductClaude] = []sources.Window{
+		{Product: sources.ProductClaude, Kind: sources.WindowFiveHour, Label: "Claude 5h", UsedPercent: 40, ResetsAt: now.Add(time.Hour), CapturedAt: now},
+		{Product: sources.ProductClaude, Kind: sources.WindowSevenDay, Label: "Claude 7d", UsedPercent: 55, ResetsAt: now.Add(48 * time.Hour), CapturedAt: now},
+		{Product: sources.ProductClaude, Kind: sources.WindowSonnetSevenDay, Label: "Sonnet 7d", UsedPercent: 25, ResetsAt: now.Add(72 * time.Hour), CapturedAt: now},
+	}
+	m.windows[sources.ProductCodex] = []sources.Window{
+		{Product: sources.ProductCodex, Kind: sources.WindowFiveHour, Label: "Codex 5h", UsedPercent: 70, ResetsAt: now.Add(2 * time.Hour), CapturedAt: now},
+		{Product: sources.ProductCodex, Kind: sources.WindowSevenDay, Label: "Codex 7d", UsedPercent: 30, ResetsAt: now.Add(72 * time.Hour), CapturedAt: now},
+	}
+	return m
+}
+
+func TestVisibilityFiltersRows(t *testing.T) {
+	cases := []struct {
+		name    string
+		vis     Visibility
+		present []string
+		absent  []string
+	}{
+		{"both", VisibilityBoth, []string{"Claude 5h", "Sonnet 7d", "Codex 5h", "Codex 7d"}, nil},
+		{"claude only", VisibilityClaudeOnly, []string{"Claude 5h", "Claude 7d", "Sonnet 7d"}, []string{"Codex 5h", "Codex 7d"}},
+		{"codex only", VisibilityCodexOnly, []string{"Codex 5h", "Codex 7d"}, []string{"Claude 5h", "Sonnet 7d"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			m := sampleBothProviders()
+			m.prefs.Visibility = c.vis
+			m.width = 80
+			plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+			for _, want := range c.present {
+				if !strings.Contains(plain, want) {
+					t.Fatalf("expected %q present, got:\n%s", want, plain)
+				}
+			}
+			for _, gone := range c.absent {
+				if strings.Contains(plain, gone) {
+					t.Fatalf("expected %q absent, got:\n%s", gone, plain)
+				}
+			}
+		})
+	}
+}
+
+func TestVisibilityHidesFreshnessLine(t *testing.T) {
+	m := sampleBothProviders()
+	m.prefs.Visibility = VisibilityClaudeOnly
+	m.width = 80
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if !strings.Contains(plain, "Claude updated") {
+		t.Fatalf("expected Claude freshness line, got:\n%s", plain)
+	}
+	if strings.Contains(plain, "Codex updated") {
+		t.Fatalf("expected no Codex freshness line, got:\n%s", plain)
+	}
+}
+
+func TestVisibilityKeepsLineWidths(t *testing.T) {
+	for _, vis := range []Visibility{VisibilityBoth, VisibilityClaudeOnly, VisibilityCodexOnly} {
+		for _, width := range []int{80, 50, 49, 30, 29, 20} {
+			t.Run(fmt.Sprintf("vis=%s/width=%d", vis, width), func(t *testing.T) {
+				m := sampleBothProviders()
+				m.prefs.Visibility = vis
+				m.width = width
+				assertRenderedLineWidths(t, render(m), width)
+			})
+		}
+	}
 }

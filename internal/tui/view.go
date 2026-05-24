@@ -98,6 +98,9 @@ func renderRows(m Model, width int) string {
 
 	// m.bars is a parallel slice aligned 1:1 with quotaRowSpecs (both built in NewModel).
 	for i, spec := range quotaRowSpecs {
+		if !m.prefs.Visibility.shows(spec.product) {
+			continue // also skips this spec's freshness line, emitted later in the same iteration
+		}
 		if window, ok := findWindow(m, spec.product, spec.kind); ok {
 			rows = append(rows, renderDataRow(spec.full, spec.short, window, m.bars[i], now(), width))
 		} else {
@@ -434,7 +437,7 @@ func renderFooter(m Model, innerWidth int) string {
 func footerRecoveryHints(m Model) []string {
 	hints := make([]string, 0, 2)
 
-	if !hasWindows(m, sources.ProductClaude) {
+	if m.prefs.Visibility.shows(sources.ProductClaude) && !hasWindows(m, sources.ProductClaude) {
 		if err, ok := m.errors[sources.ProductClaude]; ok {
 			if err.Category == sources.ErrorMissing && !m.claudeHookInstalled {
 				hints = append(hints, claudeInstallHint)
@@ -443,14 +446,10 @@ func footerRecoveryHints(m Model) []string {
 			}
 		}
 	}
-	if !hasWindows(m, sources.ProductCodex) {
+	if m.prefs.Visibility.shows(sources.ProductCodex) && !hasWindows(m, sources.ProductCodex) {
 		if _, ok := m.errors[sources.ProductCodex]; ok {
 			hints = append(hints, codexOpenHint)
 		}
-	}
-
-	if len(hints) > 0 {
-		return hints
 	}
 
 	return hints

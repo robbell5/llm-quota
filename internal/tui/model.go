@@ -3,6 +3,8 @@ package tui
 import (
 	"time"
 
+	"charm.land/bubbles/v2/progress"
+
 	"github.com/robbell5/llm-quota/internal/sources"
 )
 
@@ -23,6 +25,8 @@ type Model struct {
 	windows             map[sources.Product][]sources.Window
 	errors              map[sources.Product]sources.SourceError
 	claudeHookInstalled bool
+
+	bars []progress.Model
 }
 
 type Option func(*Model)
@@ -57,6 +61,15 @@ func NewModel(options ...Option) Model {
 	}
 	if m.errors == nil {
 		m.errors = make(map[sources.Product]sources.SourceError)
+	}
+
+	m.bars = make([]progress.Model, len(quotaRowSpecs))
+	for i := range m.bars {
+		p := progress.New(progress.WithoutPercentage())
+		p.EmptyColor = mochaSurface0
+		// Spring tuning for the Phase 9 animation; harmless until SetPercent is called.
+		p.SetSpringOptions(12.0, 1.0)
+		m.bars[i] = p
 	}
 
 	return m

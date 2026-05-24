@@ -96,9 +96,10 @@ func renderRows(m Model, width int) string {
 		now = m.now
 	}
 
-	for _, spec := range quotaRowSpecs {
+	// m.bars is a parallel slice aligned 1:1 with quotaRowSpecs (both built in NewModel).
+	for i, spec := range quotaRowSpecs {
 		if window, ok := findWindow(m, spec.product, spec.kind); ok {
-			rows = append(rows, renderDataRow(spec.full, spec.short, window, now(), width))
+			rows = append(rows, renderDataRow(spec.full, spec.short, window, m.bars[i], now(), width))
 		} else {
 			rows = append(rows, renderMissingRow(spec.full, spec.short, width))
 		}
@@ -128,7 +129,7 @@ func findWindow(m Model, product sources.Product, kind sources.WindowKind) (sour
 	return sources.Window{}, false
 }
 
-func renderDataRow(fullLabel string, shortLabel string, window sources.Window, now time.Time, width int) string {
+func renderDataRow(fullLabel string, shortLabel string, window sources.Window, bar progress.Model, now time.Time, width int) string {
 	percentText := fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))
 	percent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(formatCell(percentText, normalPercentWidth, true))
 	reset := resetText(window.ResetsAt, now)
@@ -140,7 +141,7 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, n
 		return fmt.Sprintf(
 			"%s  %s  %s  %s",
 			labelStyle.Render(formatCell(fullLabel, fullRowLabelWidth, false)),
-			renderProgressBar(window.UsedPercent, barWidth),
+			renderBar(bar, window.UsedPercent, barWidth),
 			percent,
 			formatCell(reset, normalResetWidth, true),
 		)
@@ -152,7 +153,7 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, n
 			return fmt.Sprintf(
 				"%s %s %s %s",
 				labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
-				renderProgressBar(window.UsedPercent, barWidth),
+				renderBar(bar, window.UsedPercent, barWidth),
 				compactPercent,
 				formatCell(compactReset, compactResetWidth, true),
 			)
@@ -269,14 +270,13 @@ func progressFraction(percent float64) float64 {
 	return percent / 100
 }
 
-func renderProgressBar(percent float64, width int) string {
+func renderBar(bar progress.Model, percent float64, width int) string {
 	if width < 1 {
 		width = 1
 	}
-	p := progress.New(progress.WithWidth(width), progress.WithColors(thresholdColor(percent)), progress.WithoutPercentage())
-	p.EmptyColor = mochaSurface0
-
-	return p.ViewAs(progressFraction(percent))
+	bar.SetWidth(width)
+	bar.FullColor = thresholdColor(percent)
+	return bar.ViewAs(progressFraction(percent))
 }
 
 func resetText(resetsAt time.Time, now time.Time) string {

@@ -381,7 +381,7 @@ func TestClaudeHookInstalledRejectsWrongStatusLineCachePath(t *testing.T) {
 func TestRunUnknownArgumentPreservesErrorAndExitCode(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 
-	code := run([]string{"--help"}, appStreams{
+	code := run([]string{"bogus"}, appStreams{
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}, appDeps{
@@ -393,7 +393,7 @@ func TestRunUnknownArgumentPreservesErrorAndExitCode(t *testing.T) {
 	if code != 2 {
 		t.Fatalf("exit code = %d, want 2", code)
 	}
-	if got, want := stderr.String(), "llm-quota: unknown argument: --help\n"; got != want {
+	if got, want := stderr.String(), "llm-quota: unknown argument: bogus\n"; got != want {
 		t.Fatalf("stderr = %q, want %q", got, want)
 	}
 	if stdout.Len() != 0 {
@@ -542,6 +542,79 @@ func TestRunNoArgStartupConstructsSourceBackedModelWithoutStartingRealTUI(t *tes
 	if !strings.Contains(modelDebug, "claudeHookInstalled:true") {
 		t.Fatalf("expected source-backed model to remember installed Claude hook, got %q", modelDebug)
 	}
+}
+
+func TestParseDisplayFlags(t *testing.T) {
+	cases := []struct {
+		name     string
+		args     []string
+		wantBar  tui.BarStyle
+		wantVis  tui.Visibility
+		wantHelp bool
+		wantErr  bool
+	}{
+		{"defaults", nil, tui.BarSegmented, tui.VisibilityBoth, false, false},
+		{"solid", []string{"--solid-bars"}, tui.BarSolid, tui.VisibilityBoth, false, false},
+		{"claude only", []string{"--only=claude"}, tui.BarSegmented, tui.VisibilityClaudeOnly, false, false},
+		{"codex only", []string{"--only=codex"}, tui.BarSegmented, tui.VisibilityCodexOnly, false, false},
+		{"combined", []string{"--solid-bars", "--only=codex"}, tui.BarSolid, tui.VisibilityCodexOnly, false, false},
+		{"help", []string{"--help"}, tui.BarSegmented, tui.VisibilityBoth, true, false},
+		{"short help", []string{"-h"}, tui.BarSegmented, tui.VisibilityBoth, true, false},
+		{"bad only value", []string{"--only=both"}, tui.BarSegmented, tui.VisibilityBoth, false, true},
+		{"unknown flag", []string{"--nope"}, tui.BarSegmented, tui.VisibilityBoth, false, true},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			prefs, help, err := parseDisplayFlags(c.args)
+			if (err != nil) != c.wantErr {
+				t.Fatalf("err = %v, wantErr %v", err, c.wantErr)
+			}
+			if c.wantErr {
+				return
+			}
+			if help != c.wantHelp {
+				t.Fatalf("help = %v, want %v", help, c.wantHelp)
+			}
+			if prefs.BarStyle != c.wantBar || prefs.Visibility != c.wantVis {
+				t.Fatalf("prefs = %#v, want bar=%v vis=%v", prefs, c.wantBar, c.wantVis)
+			}
+		})
+	}
+}
+
+func TestRunHelpAndBadFlagExitCodes(t *testing.T) {
+	t.Run("help exits 0 and prints usage", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		code := run([]string{"--help"}, appStreams{Stdin: strings.NewReader(""), Stdout: &stdout, Stderr: &stderr}, appDeps{})
+		if code != 0 {
+			t.Fatalf("expected exit 0, got %d", code)
+		}
+		if !strings.Contains(stdout.String(), "Usage:") {
+			t.Fatalf("expected usage text, got: %s", stdout.String())
+		}
+	})
+
+	t.Run("unknown flag exits 2", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		code := run([]string{"--nope"}, appStreams{Stdin: strings.NewReader(""), Stdout: &stdout, Stderr: &stderr}, appDeps{})
+		if code != 2 {
+			t.Fatalf("expected exit 2, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "unknown flag") {
+			t.Fatalf("expected 'unknown flag' on stderr, got: %s", stderr.String())
+		}
+	})
+
+	t.Run("invalid --only value exits 2 with guidance", func(t *testing.T) {
+		var stdout, stderr bytes.Buffer
+		code := run([]string{"--only=both"}, appStreams{Stdin: strings.NewReader(""), Stdout: &stdout, Stderr: &stderr}, appDeps{})
+		if code != 2 {
+			t.Fatalf("expected exit 2, got %d", code)
+		}
+		if !strings.Contains(stderr.String(), "invalid --only value") {
+			t.Fatalf("expected '--only' guidance on stderr, got: %s", stderr.String())
+		}
+	})
 }
 
 func assertEvents(t *testing.T, got, want []string) {

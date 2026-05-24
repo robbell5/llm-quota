@@ -41,7 +41,7 @@ func run(args []string, streams appStreams, deps appDeps) int {
 	streams = streams.withDefaults()
 	deps = deps.withDefaults()
 
-	if len(args) > 0 {
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		switch args[0] {
 		case "claude-hook-cache-writer":
 			return runClaudeHookCacheWriter(args[1:], streams)
@@ -65,11 +65,21 @@ func run(args []string, streams appStreams, deps appDeps) int {
 		}
 	}
 
+	prefs, showHelp, err := parseDisplayFlags(args)
+	if err != nil {
+		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
+		return 2
+	}
+	if showHelp {
+		printUsage(streams.Stdout)
+		return 0
+	}
+
 	if code, ok := offerFirstLaunchInstall(streams, deps); ok {
 		return code
 	}
 
-	model, err := sourceBackedModel(deps)
+	model, err := sourceBackedModel(deps, prefs)
 	if err != nil {
 		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
 		return 1
@@ -255,7 +265,7 @@ func (deps appDeps) withDefaults() appDeps {
 	return deps
 }
 
-func sourceBackedModel(deps appDeps) (tui.Model, error) {
+func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) {
 	paths, err := deps.Paths()
 	if err != nil {
 		return tui.Model{}, err
@@ -274,7 +284,48 @@ func sourceBackedModel(deps appDeps) (tui.Model, error) {
 	return tui.NewModel(
 		tui.WithReaders(claudeReader, codexReader),
 		tui.WithClaudeHookInstalled(claudeHookInstalled),
+		tui.WithDisplayPrefs(prefs),
 	), nil
+}
+
+func parseDisplayFlags(args []string) (tui.DisplayPrefs, bool, error) {
+	prefs := tui.DisplayPrefs{}
+	for _, arg := range args {
+		switch {
+		case arg == "-h" || arg == "--help":
+			return prefs, true, nil
+		case arg == "--solid-bars":
+			prefs.BarStyle = tui.BarSolid
+		case arg == "--only=claude":
+			prefs.Visibility = tui.VisibilityClaudeOnly
+		case arg == "--only=codex":
+			prefs.Visibility = tui.VisibilityCodexOnly
+		case strings.HasPrefix(arg, "--only="):
+			return prefs, false, fmt.Errorf("invalid --only value: %s (use --only=claude or --only=codex)", arg)
+		default:
+			return prefs, false, fmt.Errorf("unknown flag: %s", arg)
+		}
+	}
+	return prefs, false, nil
+}
+
+func printUsage(w io.Writer) {
+	fmt.Fprint(w, `llm-quota — Claude Code and Codex quota TUI
+
+Usage:
+  llm-quota [flags]
+  llm-quota install-claude-hook
+  llm-quota uninstall-claude-hook
+
+Flags:
+  --solid-bars    Use solid (█) progress bars instead of segmented (▌)
+  --only=claude   Show only Claude rows
+  --only=codex    Show only Codex rows
+  -h, --help      Show this help
+
+Runtime keys:
+  r refresh   b bar style   v cycle providers   q quit
+`)
 }
 
 func defaultCodexSessionsRoot() (string, error) {

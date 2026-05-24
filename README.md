@@ -107,6 +107,18 @@ Open Codex locally when Codex rows need fresh data.
 - `q` quits.
 - `Ctrl-C` quits.
 
+## Display options
+
+Set at launch with flags, or toggle live with keys:
+
+| Flag | Key | Effect |
+|------|-----|--------|
+| `--solid-bars` | `b` | Solid `█` bars instead of segmented `▌` |
+| `--only=claude` / `--only=codex` | `v` | Show only one provider (`v` cycles both → Claude-only → Codex-only → both) |
+| `--help` / `-h` | — | Show usage and exit |
+
+Other keys: `r` refresh, `q` quit. No setting can hide every provider.
+
 ## Troubleshooting
 
 If the footer shows `Claude: run install-claude-hook`, run:

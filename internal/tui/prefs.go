@@ -78,8 +78,13 @@ func (v Visibility) shows(product sources.Product) bool {
 }
 
 // DisplayPrefs holds user display preferences. The zero value is the default
-// view: segmented bars, both providers visible.
+// view: segmented bars, both providers visible, trend line shown.
 type DisplayPrefs struct {
 	BarStyle   BarStyle
 	Visibility Visibility
+	HideTrend  bool
+}
+
+func (p DisplayPrefs) trendVisible() bool {
+	return !p.HideTrend
 }

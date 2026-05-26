@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/trend"
 )
 
 const (
@@ -51,6 +52,12 @@ const (
 	normalGap          = "  "
 	compactGap         = " "
 	minProgressWidth   = 6
+)
+
+const (
+	sparkWidth         = 6
+	fullTrendIndent    = fullRowLabelWidth + len(normalGap)
+	compactTrendIndent = shortRowLabelWidth + len(compactGap)
 )
 
 type quotaRowSpec struct {
@@ -102,7 +109,13 @@ func renderRows(m Model, width int) string {
 			continue // also skips this spec's freshness line, emitted later in the same iteration
 		}
 		if window, ok := findWindow(m, spec.product, spec.kind); ok {
-			rows = append(rows, renderDataRow(spec.full, spec.short, window, m.bars[i], m.prefs.BarStyle, now(), width))
+			evenUse := trend.ElapsedFraction(spec.kind, window.ResetsAt, now())
+			rows = append(rows, renderDataRow(spec.full, spec.short, window, m.bars[i], m.prefs.BarStyle, evenUse, now(), width))
+			if m.prefs.trendVisible() {
+				if line, ok := renderTrendLine(m, spec, window, now(), width); ok {
+					rows = append(rows, line)
+				}
+			}
 		} else {
 			rows = append(rows, renderMissingRow(spec.full, spec.short, width))
 		}
@@ -132,7 +145,7 @@ func findWindow(m Model, product sources.Product, kind sources.WindowKind) (sour
 	return sources.Window{}, false
 }
 
-func renderDataRow(fullLabel string, shortLabel string, window sources.Window, bar progress.Model, style BarStyle, now time.Time, width int) string {
+func renderDataRow(fullLabel string, shortLabel string, window sources.Window, bar progress.Model, style BarStyle, evenUse float64, now time.Time, width int) string {
 	percentText := fmt.Sprintf("%.0f%%", math.Round(window.UsedPercent))
 	percent := lipgloss.NewStyle().Foreground(thresholdColor(window.UsedPercent)).Render(formatCell(percentText, normalPercentWidth, true))
 	reset := resetText(window.ResetsAt, now)
@@ -140,11 +153,12 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, b
 	switch {
 	case width >= 46:
 		barWidth := width - fullRowLabelWidth - normalPercentWidth - normalResetWidth - 3*len(normalGap)
+		barCell := tickedBar(bar, window.UsedPercent, barWidth, style, evenUse)
 
 		return fmt.Sprintf(
 			"%s  %s  %s  %s",
 			labelStyle.Render(formatCell(fullLabel, fullRowLabelWidth, false)),
-			renderBar(bar, window.UsedPercent, barWidth, style),
+			barCell,
 			percent,
 			formatCell(reset, normalResetWidth, true),
 		)
@@ -156,7 +170,7 @@ func renderDataRow(fullLabel string, shortLabel string, window sources.Window, b
 			return fmt.Sprintf(
 				"%s %s %s %s",
 				labelStyle.Render(formatCell(shortLabel, shortRowLabelWidth, false)),
-				renderBar(bar, window.UsedPercent, barWidth, style),
+				tickedBar(bar, window.UsedPercent, barWidth, style, evenUse),
 				compactPercent,
 				formatCell(compactReset, compactResetWidth, true),
 			)
@@ -234,6 +248,77 @@ func renderMissingRow(fullLabel string, shortLabel string, width int) string {
 	}
 }
 
+// renderTrendLine builds the second line (sparkline + rate + forecast) for a
+// data row, choosing the richest variant that fits `width`. Returns ("", false)
+// when there is no room (very narrow tier).
+func renderTrendLine(m Model, spec quotaRowSpec, window sources.Window, now time.Time, width int) (string, bool) {
+	if width < 26 {
+		return "", false
+	}
+	// Defensive: production builds history via NewModel (never nil), but guard
+	// against Model literals so a trend row can never panic the TUI.
+	if m.history == nil {
+		return "", false
+	}
+	indent := fullTrendIndent
+	if width < 46 {
+		indent = compactTrendIndent
+	}
+
+	key := trend.Key(spec.product, spec.kind)
+	samples := m.history.EpochSamples(key, window.ResetsAt)
+	spark := trend.Sparkline(samples, sparkWidth)
+	windowStart := window.ResetsAt.Add(-trend.WindowDuration(spec.kind))
+	rate, _ := trend.Rate(samples, now, trend.RateLookback, windowStart)
+	forecast := trend.ComputeForecast(window.UsedPercent, rate, now, window.ResetsAt)
+
+	alert := window.UsedPercent >= 100 || forecast.AtRisk
+	prefix := ""
+	if forecast.AtRisk {
+		prefix = "⚠ "
+	}
+	coreStyle := hintStyle
+	if alert {
+		coreStyle = lipgloss.NewStyle().Foreground(mochaRed)
+	}
+	prefixStyle := lipgloss.NewStyle().Foreground(mochaRed)
+
+	for _, rich := range []bool{true, false} {
+		core := forecastCore(forecast, window.UsedPercent, rich)
+		plain := strings.Repeat(" ", indent) + prefix + spark + "  " + core
+		if lipgloss.Width(plain) > width {
+			continue
+		}
+		line := strings.Repeat(" ", indent) +
+			prefixStyle.Render(prefix) +
+			hintStyle.Render(spark) +
+			"  " +
+			coreStyle.Render(core)
+		return line, true
+	}
+	return "", false
+}
+
+// forecastCore is the text after the sparkline: arrow + rate, optionally with
+// the projection clause. A maxed window shows just "full".
+func forecastCore(f trend.Forecast, usedPct float64, rich bool) string {
+	if usedPct >= 100 {
+		return "full"
+	}
+	core := fmt.Sprintf("%c %s/hr", f.Arrow, rateText(f.Rate))
+	if rich && f.Status != "" {
+		core += " · " + f.Status
+	}
+	return core
+}
+
+func rateText(rate float64) string {
+	if rate > 0 && rate < 1 {
+		return "<1%"
+	}
+	return fmt.Sprintf("%.0f%%", rate)
+}
+
 func formatCell(value string, width int, alignRight bool) string {
 	if width <= 0 {
 		return ""
@@ -291,6 +376,78 @@ func renderBar(bar progress.Model, percent float64, width int, style BarStyle) s
 		return bar.View()
 	}
 	return bar.ViewAs(progressFraction(percent))
+}
+
+// overlayEvenUseTick replaces the bar cell at the elapsed-fraction position
+// with a tick marker, preserving the bar's visible width.
+func overlayEvenUseTick(bar string, width int, fraction float64) string {
+	if width <= 0 {
+		return bar
+	}
+	if fraction < 0 {
+		fraction = 0
+	}
+	if fraction > 1 {
+		fraction = 1
+	}
+	col := int(math.Round(fraction * float64(width-1)))
+	if col < 0 {
+		col = 0
+	}
+	if col > width-1 {
+		col = width - 1
+	}
+	tick := lipgloss.NewStyle().Foreground(mochaText).Render("▕")
+	return replaceCellAt(bar, col, tick)
+}
+
+// replaceCellAt swaps the visible rune at display column `col` for
+// `replacement`, copying ANSI escape sequences verbatim (they have zero width)
+// and re-emitting the active style after the replacement so trailing cells keep
+// their color.
+func replaceCellAt(s string, col int, replacement string) string {
+	var b strings.Builder
+	runes := []rune(s)
+	visible := 0
+	lastEscape := ""
+	for i := 0; i < len(runes); {
+		if runes[i] == '\x1b' {
+			j := i + 1
+			if j < len(runes) && runes[j] == '[' {
+				j++
+				for j < len(runes) && !(runes[j] >= '@' && runes[j] <= '~') {
+					j++
+				}
+				if j < len(runes) {
+					j++
+				}
+			}
+			esc := string(runes[i:j])
+			lastEscape = esc
+			b.WriteString(esc)
+			i = j
+			continue
+		}
+		if visible == col {
+			b.WriteString(replacement)
+			b.WriteString(lastEscape)
+		} else {
+			b.WriteRune(runes[i])
+		}
+		visible++
+		i++
+	}
+	return b.String()
+}
+
+// tickedBar renders the progress bar and overlays the even-use tick, except
+// while the bar is mid-animation (the animated frame owns the full width).
+func tickedBar(bar progress.Model, percent float64, width int, style BarStyle, evenUse float64) string {
+	out := renderBar(bar, percent, width, style)
+	if bar.IsAnimating() {
+		return out
+	}
+	return overlayEvenUseTick(out, width, evenUse)
 }
 
 func resetText(resetsAt time.Time, now time.Time) string {

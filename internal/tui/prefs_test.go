@@ -56,3 +56,14 @@ func TestWithDisplayPrefs(t *testing.T) {
 		t.Fatalf("expected prefs applied, got %#v", m.prefs)
 	}
 }
+
+func TestTrendVisibleDefaultsOn(t *testing.T) {
+	var p DisplayPrefs // zero value
+	if !p.trendVisible() {
+		t.Fatalf("zero-value DisplayPrefs should show the trend line")
+	}
+	p.HideTrend = true
+	if p.trendVisible() {
+		t.Fatalf("HideTrend=true should hide the trend line")
+	}
+}

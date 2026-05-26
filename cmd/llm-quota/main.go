@@ -13,6 +13,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"github.com/robbell5/llm-quota/internal/install"
 	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/trend"
 	"github.com/robbell5/llm-quota/internal/tui"
 )
 
@@ -281,10 +282,12 @@ func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) 
 
 	claudeReader := sources.NewClaudeReader(paths.CachePath)
 	codexReader := sources.NewCodexReader(codexSessionsRoot)
+	historyStore := trend.NewStore(filepath.Join(filepath.Dir(paths.CachePath), "history.json"))
 	return tui.NewModel(
 		tui.WithReaders(claudeReader, codexReader),
 		tui.WithClaudeHookInstalled(claudeHookInstalled),
 		tui.WithDisplayPrefs(prefs),
+		tui.WithHistoryStore(historyStore),
 	), nil
 }
 
@@ -302,6 +305,8 @@ func parseDisplayFlags(args []string) (tui.DisplayPrefs, bool, error) {
 			prefs.Visibility = tui.VisibilityCodexOnly
 		case strings.HasPrefix(arg, "--only="):
 			return prefs, false, fmt.Errorf("invalid --only value: %s (use --only=claude or --only=codex)", arg)
+		case arg == "--no-trend":
+			prefs.HideTrend = true
 		default:
 			return prefs, false, fmt.Errorf("unknown flag: %s", arg)
 		}
@@ -321,10 +326,11 @@ Flags:
   --solid-bars    Use solid (█) progress bars instead of segmented (▌)
   --only=claude   Show only Claude rows
   --only=codex    Show only Codex rows
+  --no-trend      Hide the per-row sparkline and pace forecast line
   -h, --help      Show this help
 
 Runtime keys:
-  r refresh   b bar style   v cycle providers   q quit
+  r refresh   b bar style   v cycle providers   t trend line   q quit
 `)
 }
 

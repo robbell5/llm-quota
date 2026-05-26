@@ -9,6 +9,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/trend"
 )
 
 type refreshRequestedMsg struct{}
@@ -46,6 +47,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		case "v":
 			m.prefs.Visibility = m.prefs.Visibility.next()
+			return m, nil
+		case "t":
+			m.prefs.HideTrend = !m.prefs.HideTrend
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -167,8 +171,20 @@ func (m *Model) mergeRefresh(msg refreshMsg) []tea.Cmd {
 			continue
 		}
 
-		m.windows[result.product] = markStale(result.windows, msg.fetchedAt, m.staleAfter)
+		stamped := markStale(result.windows, msg.fetchedAt, m.staleAfter)
+		m.windows[result.product] = stamped
+		for _, w := range stamped {
+			m.history.Append(trend.Key(w.Product, w.Kind), trend.Sample{
+				CapturedAt: w.CapturedAt,
+				UsedPct:    w.UsedPercent,
+				ResetsAt:   w.ResetsAt,
+			})
+		}
 		delete(m.errors, result.product)
+	}
+
+	if m.store != nil {
+		_ = m.store.Save(m.history)
 	}
 
 	return m.syncBarTargets()

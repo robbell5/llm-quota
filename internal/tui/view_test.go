@@ -10,6 +10,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/trend"
 )
 
 var ansiEscapeRE = regexp.MustCompile(`\x1b\[[0-9;?]*[ -/]*[@-~]`)
@@ -646,6 +647,43 @@ func TestVisibilityKeepsLineWidths(t *testing.T) {
 	}
 }
 
+func TestReplaceCellAtPlainString(t *testing.T) {
+	if got := replaceCellAt("abcde", 2, "X"); got != "abXde" {
+		t.Fatalf("replaceCellAt = %q, want abXde", got)
+	}
+}
+
+func TestReplaceCellAtPreservesWidthWithANSI(t *testing.T) {
+	styled := lipgloss.NewStyle().Foreground(mochaGreen).Render("█████")
+	out := replaceCellAt(styled, 2, lipgloss.NewStyle().Foreground(mochaText).Render("▕"))
+	plain := ansiEscapeRE.ReplaceAllString(out, "")
+	if plain != "██▕██" {
+		t.Fatalf("plain = %q, want ██▕██", plain)
+	}
+	if got := lipgloss.Width(out); got != 5 {
+		t.Fatalf("width = %d, want 5", got)
+	}
+}
+
+func TestEvenUseTickAppearsInDataRow(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	m := NewModel(WithClock(func() time.Time { return now }))
+	m.width = 80
+	m.height = 12
+	m.windows[sources.ProductClaude] = []sources.Window{
+		{Product: sources.ProductClaude, Kind: sources.WindowFiveHour, Label: "Claude 5h",
+			UsedPercent: 50, ResetsAt: now.Add(2 * time.Hour), CapturedAt: now},
+	}
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if !strings.Contains(plain, "▕") {
+		t.Fatalf("expected even-use tick in rendered row, got:\n%s", plain)
+	}
+	for _, width := range []int{80, 50, 49, 30} {
+		m.width = width
+		assertRenderedLineWidths(t, render(m), width)
+	}
+}
+
 func TestRenderBarWhileAnimatingIsWidthSafe(t *testing.T) {
 	m := NewModel()
 	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
@@ -663,5 +701,76 @@ func TestRenderBarWhileAnimatingIsWidthSafe(t *testing.T) {
 	plain := ansiEscapeRE.ReplaceAllString(renderBar(m.bars[i], 60, width, BarSegmented), "")
 	if got := len([]rune(plain)); got != width {
 		t.Fatalf("animating bar width = %d runes, want %d: %q", got, width, plain)
+	}
+}
+
+func modelWithHistory(now time.Time, kind sources.WindowKind, percents []float64, capStepMin int, usedPct float64, resetsAt time.Time) Model {
+	m := NewModel(WithClock(func() time.Time { return now }))
+	m.width = 80
+	m.height = 12
+	key := trend.Key(sources.ProductClaude, kind)
+	for i, p := range percents {
+		m.history.Append(key, trend.Sample{
+			CapturedAt: now.Add(time.Duration(-(len(percents)-1-i)*capStepMin) * time.Minute),
+			UsedPct:    p,
+			ResetsAt:   resetsAt,
+		})
+	}
+	m.windows[sources.ProductClaude] = []sources.Window{
+		{Product: sources.ProductClaude, Kind: kind, Label: "Claude 5h",
+			UsedPercent: usedPct, ResetsAt: resetsAt, CapturedAt: now},
+	}
+	return m
+}
+
+func TestSecondLineSafeShowsProjection(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	reset := now.Add(4 * time.Hour)
+	// Slow climb 10 -> 12 over the last hour: lots of headroom, never hits 100.
+	m := modelWithHistory(now, sources.WindowFiveHour, []float64{10, 12}, 60, 12, reset)
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if !strings.Contains(plain, "by reset") {
+		t.Fatalf("expected safe projection 'by reset', got:\n%s", plain)
+	}
+	if strings.Contains(plain, "⚠") {
+		t.Fatalf("safe window should not show the warning marker:\n%s", plain)
+	}
+}
+
+func TestSecondLineAtRiskShowsWarning(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	reset := now.Add(2 * time.Hour)
+	// Fast climb 20 -> 60 over the last hour (40%/hr) -> full in 1h < 2h to reset.
+	m := modelWithHistory(now, sources.WindowFiveHour, []float64{20, 60}, 60, 60, reset)
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if !strings.Contains(plain, "⚠") || !strings.Contains(plain, "full in") {
+		t.Fatalf("expected at-risk warning with 'full in', got:\n%s", plain)
+	}
+}
+
+func TestSecondLineHiddenWhenTrendOff(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	reset := now.Add(4 * time.Hour)
+	m := modelWithHistory(now, sources.WindowFiveHour, []float64{10, 12}, 60, 12, reset)
+	m.prefs.HideTrend = true
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if strings.Contains(plain, "by reset") || strings.Contains(plain, "%/hr") {
+		t.Fatalf("trend-off should omit the second line, got:\n%s", plain)
+	}
+}
+
+func TestSecondLineWidthSafeAcrossTiers(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	reset := now.Add(2 * time.Hour)
+	m := modelWithHistory(now, sources.WindowFiveHour, []float64{20, 60}, 60, 60, reset)
+	for _, width := range []int{80, 50, 49, 30, 29, 20} {
+		m.width = width
+		assertRenderedLineWidths(t, render(m), width)
+	}
+	// Very narrow: the second line is dropped entirely.
+	m.width = 29
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if strings.Contains(plain, "%/hr") {
+		t.Fatalf("width 29 should omit the second line, got:\n%s", plain)
 	}
 }

@@ -617,6 +617,16 @@ func TestRunHelpAndBadFlagExitCodes(t *testing.T) {
 	})
 }
 
+func TestParseDisplayFlagsNoTrend(t *testing.T) {
+	prefs, showHelp, err := parseDisplayFlags([]string{"--no-trend"})
+	if err != nil || showHelp {
+		t.Fatalf("unexpected err=%v showHelp=%v", err, showHelp)
+	}
+	if !prefs.HideTrend {
+		t.Fatalf("--no-trend should set HideTrend")
+	}
+}
+
 func assertEvents(t *testing.T, got, want []string) {
 	t.Helper()
 	if strings.Join(got, ",") != strings.Join(want, ",") {

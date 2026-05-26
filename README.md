@@ -11,6 +11,8 @@
 
 Each available row shows percent used, a colored progress bar, and the reset countdown. Missing rows stay visible so the pane remains useful while local data is being produced.
 
+Each row also shows a recent burn rate, a forecast (projected fill at reset, or time-to-100% when a window is on pace to exhaust early), and a sparkline of usage within the current window. A window projected to hit 100% before it resets is flagged with a ⚠ and red forecast text.
+
 ## Install
 
 Choose one install path.
@@ -63,6 +65,14 @@ After Claude runs, the hook writes local quota data to:
 ~/.cache/llm-quota/claude.json
 ```
 
+The pace forecast and sparkline are backed by a small local history file:
+
+```text
+~/.cache/llm-quota/history.json
+```
+
+It is written automatically while `llm-quota` runs and is safe to delete; the tool rebuilds it from new samples.
+
 Normal `llm-quota` launches may also offer to install this app-owned cache writer on first run, but the documented setup path is the explicit command above.
 
 ### Uninstall Claude quota data setup
@@ -112,9 +122,10 @@ Open Codex locally when Codex rows need fresh data.
 Set at launch with flags, or toggle live with keys:
 
 | Flag | Key | Effect |
-|------|-----|--------|
+| ------ | --- | ------ |
 | `--solid-bars` | `b` | Solid `█` bars instead of segmented `▌` |
 | `--only=claude` / `--only=codex` | `v` | Show only one provider (`v` cycles both → Claude-only → Codex-only → both) |
+| `--no-trend` | `t` | Hide the per-row sparkline + pace forecast line (one-line rows) |
 | `--help` / `-h` | — | Show usage and exit |
 
 Other keys: `r` refresh, `q` quit. No setting can hide every provider.
@@ -143,4 +154,4 @@ The TUI does not print private Claude or Codex payloads. It keeps recovery actio
 
 ## Scope
 
-v1 is a local-only foreground tmux-pane monitor. It does not use network or OAuth fallback, macOS Keychain reads, statusline integration, a daemon, alerts, forecasting, demo mode, or fixture mode.
+v1 is a local-only foreground tmux-pane monitor. It persists a small local usage history (`~/.cache/llm-quota/history.json`) to power the in-pane pace forecast, burn rate, and trend sparkline. It does not use network or OAuth fallback, macOS Keychain reads, OS-level notifications/alerts, a daemon, multi-account support, demo mode, or fixture mode.

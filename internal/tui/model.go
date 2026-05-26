@@ -6,6 +6,7 @@ import (
 	"charm.land/bubbles/v2/progress"
 
 	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/trend"
 )
 
 type SourceReader interface {
@@ -29,6 +30,9 @@ type Model struct {
 	bars       []progress.Model
 	barTargets []float64
 	prefs      DisplayPrefs
+
+	history *trend.History
+	store   *trend.Store
 }
 
 type Option func(*Model)
@@ -78,6 +82,13 @@ func NewModel(options ...Option) Model {
 		m.barTargets[i] = -1
 	}
 
+	if m.store != nil {
+		m.history = m.store.Load()
+	}
+	if m.history == nil {
+		m.history = trend.NewHistory()
+	}
+
 	return m
 }
 
@@ -109,5 +120,11 @@ func WithClaudeHookInstalled(installed bool) Option {
 func WithDisplayPrefs(prefs DisplayPrefs) Option {
 	return func(m *Model) {
 		m.prefs = prefs
+	}
+}
+
+func WithHistoryStore(store *trend.Store) Option {
+	return func(m *Model) {
+		m.store = store
 	}
 }

@@ -11,6 +11,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/robbell5/llm-quota/internal/sources"
+	"github.com/robbell5/llm-quota/internal/trend"
 )
 
 var fixedNow = time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
@@ -335,6 +336,22 @@ func TestToggleKeys(t *testing.T) {
 	})
 }
 
+func TestTKeyTogglesTrend(t *testing.T) {
+	m := NewModel()
+	if m.prefs.HideTrend {
+		t.Fatalf("trend should start visible")
+	}
+	updated, _ := m.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+	got := updated.(Model)
+	if !got.prefs.HideTrend {
+		t.Fatalf("expected 't' to hide the trend line")
+	}
+	updated, _ = got.Update(tea.KeyPressMsg{Code: 't', Text: "t"})
+	if updated.(Model).prefs.HideTrend {
+		t.Fatalf("expected second 't' to show the trend line")
+	}
+}
+
 func TestTickSchedulesRefreshAndNextTick(t *testing.T) {
 	model := NewModel()
 	updated, cmd := model.Update(tickMsg(fixedNow))
@@ -432,6 +449,36 @@ func TestWindowSizeDoesNotAnimate(t *testing.T) {
 		if m.bars[i].IsAnimating() {
 			t.Fatalf("bar %d should not animate on resize", i)
 		}
+	}
+}
+
+func TestMergeRefreshAppendsHistory(t *testing.T) {
+	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
+	m := NewModel(WithClock(func() time.Time { return now }))
+
+	reset := now.Add(2 * time.Hour)
+	msg := refreshMsg{
+		fetchedAt: now,
+		results: []sourceRefreshResult{
+			{product: sources.ProductClaude, windows: []sources.Window{
+				{Product: sources.ProductClaude, Kind: sources.WindowFiveHour, Label: "Claude 5h",
+					UsedPercent: 41, ResetsAt: reset, CapturedAt: now},
+			}},
+		},
+	}
+	m.mergeRefresh(msg)
+
+	key := trend.Key(sources.ProductClaude, sources.WindowFiveHour)
+	got := m.history.EpochSamples(key, reset)
+	if len(got) != 1 || got[0].UsedPct != 41 {
+		t.Fatalf("expected one appended sample at 41%%, got %+v", got)
+	}
+}
+
+func TestNewModelHasEmptyHistoryWithoutStore(t *testing.T) {
+	m := NewModel()
+	if m.history == nil {
+		t.Fatalf("history should be initialized even without a store")
 	}
 }
 

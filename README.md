@@ -17,21 +17,29 @@ Each row also shows a recent burn rate, a forecast (projected fill at reset, or 
 
 Choose one install path.
 
-To install with Homebrew from the current `main` branch, run:
+To install with Homebrew, run:
 
 ```sh
-brew install --HEAD robbell5/tap/llm-quota
+brew install robbell5/tap/llm-quota
 llm-quota install-claude-hook
 llm-quota
 ```
 
-Homebrew links the `llm-quota` command into its managed bin directory, so no Go `PATH` setup is required.
+Homebrew links the `llm-quota` command into its managed bin directory, so no Go `PATH` setup is required. Pick up new releases with:
+
+```sh
+brew update && brew upgrade robbell5/tap/llm-quota
+```
+
+Check the installed version any time with `llm-quota --version`.
 
 For Go developers who already have Go's install bin directory on `PATH`, this also works:
 
 ```sh
 go install github.com/robbell5/llm-quota/cmd/llm-quota@latest
 ```
+
+For the latest unreleased code from `main`, replace `@latest` with `@main`.
 
 For a local repository smoke check without changing a wider shell setup, build and run the local binary from the repo root:
 

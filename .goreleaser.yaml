@@ -1,0 +1,59 @@
+version: 2
+
+project_name: llm-quota
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: llm-quota
+    main: ./cmd/llm-quota
+    binary: llm-quota
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+    mod_timestamp: "{{ .CommitTimestamp }}"
+    ldflags:
+      - -s -w
+      - -X main.version={{ .Version }}
+      - -X main.commit={{ .Commit }}
+      - -X main.date={{ .Date }}
+
+archives:
+  - id: llm-quota
+    formats: [tar.gz]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+
+brews:
+  - name: llm-quota
+    repository:
+      owner: robbell5
+      name: homebrew-tap
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/robbell5/llm-quota"
+    description: "Terminal UI for local Claude Code and Codex quota windows"
+    commit_msg_template: "Brew formula update for {{ .ProjectName }} version {{ .Tag }}"
+    install: |
+      bin.install "llm-quota"
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/llm-quota --version")

@@ -17,6 +17,13 @@ import (
 	"github.com/robbell5/llm-quota/internal/tui"
 )
 
+// Build information. Overridden at release time by GoReleaser via -ldflags.
+var (
+	version = "dev"
+	commit  = "none"
+	date    = "unknown"
+)
+
 type appStreams struct {
 	Stdin  io.Reader
 	Stdout io.Writer
@@ -41,6 +48,15 @@ func main() {
 func run(args []string, streams appStreams, deps appDeps) int {
 	streams = streams.withDefaults()
 	deps = deps.withDefaults()
+
+	if len(args) > 0 && (args[0] == "version" || args[0] == "--version") {
+		if len(args) > 1 {
+			fmt.Fprintf(streams.Stderr, "llm-quota: unknown argument: %s\n", args[1])
+			return 2
+		}
+		fmt.Fprintf(streams.Stdout, "llm-quota %s (commit %s, built %s)\n", version, commit, date)
+		return 0
+	}
 
 	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		switch args[0] {
@@ -321,12 +337,14 @@ Usage:
   llm-quota [flags]
   llm-quota install-claude-hook
   llm-quota uninstall-claude-hook
+  llm-quota version
 
 Flags:
   --solid-bars    Use solid (█) progress bars instead of segmented (▌)
   --only=claude   Show only Claude rows
   --only=codex    Show only Codex rows
   --no-trend      Hide the per-row sparkline and pace forecast line
+  --version       Print version information and exit
   -h, --help      Show this help
 
 Runtime keys:

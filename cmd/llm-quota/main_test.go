@@ -627,6 +627,65 @@ func TestParseDisplayFlagsNoTrend(t *testing.T) {
 	}
 }
 
+func TestRunVersionReportsBuildVersion(t *testing.T) {
+	for _, args := range [][]string{{"version"}, {"--version"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			tuiStarted := false
+
+			code := run(args, appStreams{
+				Stdin:  strings.NewReader(""),
+				Stdout: &stdout,
+				Stderr: &stderr,
+			}, appDeps{
+				StartTUI: func(model tui.Model) error {
+					tuiStarted = true
+					return errors.New("should not start TUI")
+				},
+			})
+
+			if code != 0 {
+				t.Fatalf("exit code = %d, want 0; stderr=%q", code, stderr.String())
+			}
+			if tuiStarted {
+				t.Fatal("version request should not start the TUI")
+			}
+			if !strings.HasPrefix(stdout.String(), "llm-quota "+version) {
+				t.Fatalf("stdout = %q, want prefix %q", stdout.String(), "llm-quota "+version)
+			}
+			if stderr.Len() != 0 {
+				t.Fatalf("stderr = %q, want empty", stderr.String())
+			}
+		})
+	}
+}
+
+func TestRunVersionRejectsExtraArgs(t *testing.T) {
+	for _, args := range [][]string{{"version", "extra"}, {"--version", "extra"}} {
+		t.Run(strings.Join(args, " "), func(t *testing.T) {
+			var stdout, stderr bytes.Buffer
+			code := run(args, appStreams{
+				Stdin:  strings.NewReader(""),
+				Stdout: &stdout,
+				Stderr: &stderr,
+			}, appDeps{
+				StartTUI: func(model tui.Model) error {
+					return errors.New("should not start TUI")
+				},
+			})
+			if code != 2 {
+				t.Fatalf("exit code = %d, want 2", code)
+			}
+			if got, want := stderr.String(), "llm-quota: unknown argument: extra\n"; got != want {
+				t.Fatalf("stderr = %q, want %q", got, want)
+			}
+			if stdout.Len() != 0 {
+				t.Fatalf("stdout = %q, want empty", stdout.String())
+			}
+		})
+	}
+}
+
 func assertEvents(t *testing.T, got, want []string) {
 	t.Helper()
 	if strings.Join(got, ",") != strings.Join(want, ",") {

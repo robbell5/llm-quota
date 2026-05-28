@@ -6,15 +6,6 @@ import (
 	"github.com/robbell5/llm-quota/internal/sources"
 )
 
-func TestBarStyleToggled(t *testing.T) {
-	if BarSegmented.toggled() != BarSolid {
-		t.Fatal("segmented should toggle to solid")
-	}
-	if BarSolid.toggled() != BarSegmented {
-		t.Fatal("solid should toggle to segmented")
-	}
-}
-
 func TestVisibilityNextCycles(t *testing.T) {
 	got := []Visibility{}
 	v := VisibilityBoth
@@ -51,8 +42,8 @@ func TestVisibilityShows(t *testing.T) {
 }
 
 func TestWithDisplayPrefs(t *testing.T) {
-	m := NewModel(WithDisplayPrefs(DisplayPrefs{BarStyle: BarSolid, Visibility: VisibilityCodexOnly}))
-	if m.prefs.BarStyle != BarSolid || m.prefs.Visibility != VisibilityCodexOnly {
+	m := NewModel(WithDisplayPrefs(DisplayPrefs{Visibility: VisibilityCodexOnly, HideTrend: true}))
+	if m.prefs.Visibility != VisibilityCodexOnly || !m.prefs.HideTrend {
 		t.Fatalf("expected prefs applied, got %#v", m.prefs)
 	}
 }
@@ -65,5 +56,12 @@ func TestTrendVisibleDefaultsOn(t *testing.T) {
 	p.HideTrend = true
 	if p.trendVisible() {
 		t.Fatalf("HideTrend=true should hide the trend line")
+	}
+}
+
+func TestDisplayPrefsIconsDefaultOff(t *testing.T) {
+	var p DisplayPrefs
+	if p.Icons {
+		t.Fatalf("Icons should default to false (safe glyphs)")
 	}
 }

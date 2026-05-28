@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 
 	"github.com/robbell5/llm-quota/internal/sources"
@@ -149,10 +148,9 @@ func TestRefresh(t *testing.T) {
 			t.Fatalf("expected duplicate refresh request to coalesce, got %T", duplicate())
 		}
 
-		msg, ok := cmd().(refreshMsg)
-		if !ok {
-			t.Fatalf("expected refreshMsg, got %T", cmd())
-		}
+		// The request batches the (synchronous) refresh command with the animation
+		// tick; pull the refreshMsg out of the batch without blocking on the timer.
+		msg := firstRefreshMsg(t, cmd)
 		if msg.fetchedAt != fixedNow {
 			t.Fatalf("expected fixed fetch time %s, got %s", fixedNow, msg.fetchedAt)
 		}
@@ -317,16 +315,6 @@ func contains(s string, needle string) bool {
 }
 
 func TestToggleKeys(t *testing.T) {
-	t.Run("b toggles bar style", func(t *testing.T) {
-		updated, cmd := NewModel().Update(tea.KeyPressMsg{Text: "b", Code: 'b'})
-		if cmd != nil {
-			t.Fatalf("expected nil command, got %T", cmd())
-		}
-		if got := updated.(Model).prefs.BarStyle; got != BarSolid {
-			t.Fatalf("expected BarSolid after one toggle, got %v", got)
-		}
-	})
-
 	t.Run("v cycles visibility", func(t *testing.T) {
 		m := NewModel()
 		updated, _ := m.Update(tea.KeyPressMsg{Text: "v", Code: 'v'})
@@ -334,6 +322,18 @@ func TestToggleKeys(t *testing.T) {
 			t.Fatalf("expected VisibilityClaudeOnly after one v, got %v", got)
 		}
 	})
+}
+
+func TestIKeyTogglesIcons(t *testing.T) {
+	var model tea.Model = NewModel()
+	model, _ = model.Update(tea.KeyPressMsg{Text: "i", Code: 'i'})
+	if !model.(Model).prefs.Icons {
+		t.Fatalf("i should enable icons")
+	}
+	model, _ = model.Update(tea.KeyPressMsg{Text: "i", Code: 'i'})
+	if model.(Model).prefs.Icons {
+		t.Fatalf("i should toggle icons back off")
+	}
 }
 
 func TestTKeyTogglesTrend(t *testing.T) {
@@ -399,56 +399,149 @@ func barIndex(t *testing.T, product sources.Product, kind sources.WindowKind) in
 }
 
 func TestRefreshStartsAnimationForNewData(t *testing.T) {
+	// New data sets the bar target away from its empty start, so the model now
+	// reports it needs frames. (The frame loop itself is kicked by
+	// refreshRequestedMsg via ensureAnim; mergeRefresh only updates targets.)
 	updated, _ := NewModel().Update(refreshMsg{
 		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
 		fetchedAt: fixedNow,
 	})
 	m := updated.(Model)
 	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
-	if !m.bars[i].IsAnimating() {
-		t.Fatal("expected Claude 5h bar to animate from empty toward its target")
+	if m.bars[i].target != progressFraction(60) {
+		t.Fatalf("expected Claude 5h bar target %v, got %v", progressFraction(60), m.bars[i].target)
+	}
+	if !m.animating() {
+		t.Fatal("expected model to be animating from empty toward its target")
 	}
 }
 
-func TestRefreshDoesNotReanimateUnchangedValue(t *testing.T) {
-	first, _ := NewModel().Update(refreshMsg{
+func TestRefreshRequestKicksAnimationLoop(t *testing.T) {
+	claude := &fakeReader{windows: []sources.Window{window(sources.ProductClaude, sources.WindowFiveHour, fixedNow)}}
+	codex := &fakeReader{windows: []sources.Window{window(sources.ProductCodex, sources.WindowFiveHour, fixedNow)}}
+	model := NewModel(WithReaders(claude, codex), WithClock(func() time.Time { return fixedNow }))
+
+	updated, cmd := model.Update(refreshRequestedMsg{})
+	if cmd == nil {
+		t.Fatal("expected refresh request to return a command batch")
+	}
+	if !updated.(Model).animRunning {
+		t.Fatal("expected refresh request to start the animation loop via ensureAnim")
+	}
+}
+
+func TestRefreshHighlightsChangedValueButNotFirstLoad(t *testing.T) {
+	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
+
+	first, _ := NewModel(WithClock(func() time.Time { return fixedNow })).Update(refreshMsg{
 		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
 		fetchedAt: fixedNow,
 	})
 	m := first.(Model)
+	if !m.highlightUntil[i].IsZero() {
+		t.Fatalf("first load should not arm a value-change highlight, got %v", m.highlightUntil[i])
+	}
+
+	second, _ := m.Update(refreshMsg{
+		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 80, fixedNow.Add(time.Minute))},
+		fetchedAt: fixedNow.Add(time.Minute),
+	})
+	m2 := second.(Model)
+	if m2.highlightUntil[i].IsZero() {
+		t.Fatal("a changed value should arm the highlight timer")
+	}
+}
+
+func TestRefreshDoesNotRehighlightUnchangedValue(t *testing.T) {
 	i := barIndex(t, sources.ProductClaude, sources.WindowFiveHour)
-	// Settle the first animation so IsAnimating would only be true again on a change.
-	m.bars[i] = settleBar(m.bars[i])
+	first, _ := NewModel(WithClock(func() time.Time { return fixedNow })).Update(refreshMsg{
+		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
+		fetchedAt: fixedNow,
+	})
+	m := first.(Model)
 
 	second, _ := m.Update(refreshMsg{
 		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow.Add(time.Minute))},
 		fetchedAt: fixedNow.Add(time.Minute),
 	})
 	m2 := second.(Model)
-	if m2.bars[i].IsAnimating() {
-		t.Fatal("expected no re-animation when the value is unchanged")
+	if !m2.highlightUntil[i].IsZero() {
+		t.Fatal("expected no highlight when the value is unchanged")
 	}
 }
 
-func TestMissingRowBarDoesNotAnimate(t *testing.T) {
+func TestMissingRowBarStaysAtSentinel(t *testing.T) {
 	updated, _ := NewModel().Update(refreshMsg{
 		results:   []sourceRefreshResult{dataResult(sources.ProductClaude, sources.WindowFiveHour, 60, fixedNow)},
 		fetchedAt: fixedNow,
 	})
 	m := updated.(Model)
 	sonnet := barIndex(t, sources.ProductClaude, sources.WindowSonnetSevenDay)
-	if m.bars[sonnet].IsAnimating() {
-		t.Fatal("expected absent Sonnet bar to stay idle")
+	if m.bars[sonnet].target != -1 {
+		t.Fatalf("expected absent Sonnet bar to keep sentinel target -1, got %v", m.bars[sonnet].target)
 	}
 }
 
-func TestWindowSizeDoesNotAnimate(t *testing.T) {
-	updated, _ := NewModel().Update(tea.WindowSizeMsg{Width: 50, Height: 12})
+func TestWindowSizeDoesNotStartAnimation(t *testing.T) {
+	updated, cmd := NewModel().Update(tea.WindowSizeMsg{Width: 50, Height: 12})
 	m := updated.(Model)
-	for i := range m.bars {
-		if m.bars[i].IsAnimating() {
-			t.Fatalf("bar %d should not animate on resize", i)
+	if m.animRunning {
+		t.Fatal("resize should not start the animation loop")
+	}
+	if cmd != nil {
+		t.Fatalf("resize should return a nil command, got %T", cmd())
+	}
+	for i, b := range m.bars {
+		if b.target != -1 {
+			t.Fatalf("bar %d should keep sentinel target after resize, got %v", i, b.target)
 		}
+	}
+}
+
+func TestAnimTickAdvancesSpringTowardTarget(t *testing.T) {
+	m := NewModel()
+	m.bars[0].target = 1.0
+	var model tea.Model = m
+	for i := 0; i < 60; i++ { // ~4s of frames at 15fps
+		model, _ = model.Update(animTickMsg(time.Now()))
+	}
+	if got := model.(Model).bars[0].pos; got < 0.95 {
+		t.Fatalf("spring did not settle toward target: pos=%v", got)
+	}
+}
+
+func TestAnimatingFalseWhenIdle(t *testing.T) {
+	m := NewModel()
+	for i := range m.bars {
+		m.bars[i].target = 0
+		m.bars[i].pos = 0
+	}
+	if m.animating() {
+		t.Fatalf("idle model should not be animating")
+	}
+}
+
+func TestAnimatingTrueWhileRefreshing(t *testing.T) {
+	m := NewModel()
+	m.refreshing = true
+	if !m.animating() {
+		t.Fatalf("refreshing model should be animating")
+	}
+}
+
+func TestAnimTickStopsWhenSettled(t *testing.T) {
+	m := NewModel()
+	for i := range m.bars {
+		m.bars[i].target = 0
+		m.bars[i].pos = 0
+	}
+	m.animRunning = true
+	updated, cmd := m.Update(animTickMsg(time.Now()))
+	if cmd != nil {
+		t.Fatalf("settled animation should self-suspend with a nil command, got %T", cmd())
+	}
+	if updated.(Model).animRunning {
+		t.Fatal("settled animation should clear animRunning so the loop self-suspends")
 	}
 }
 
@@ -482,17 +575,43 @@ func TestNewModelHasEmptyHistoryWithoutStore(t *testing.T) {
 	}
 }
 
-// settleBar advances a progress bar until it stops animating, feeding it the
-// frame messages its own commands produce (FrameMsg has unexported fields, so
-// we can only obtain valid ones from the bar's own commands).
-func settleBar(b progress.Model) progress.Model {
-	cmd := b.SetPercent(b.Percent())
-	for b.IsAnimating() {
-		msg := cmd()
-		b, cmd = b.Update(msg)
-		if cmd == nil {
-			cmd = b.SetPercent(b.Percent())
+// firstRefreshMsg runs cmd (a single command or a tea.Batch) and returns the
+// refreshMsg it produces. Each leaf command runs in its own goroutine so a
+// batched, blocking tea.Tick command (the animation loop) never stalls the test.
+func firstRefreshMsg(t *testing.T, cmd tea.Cmd) refreshMsg {
+	t.Helper()
+	if cmd == nil {
+		t.Fatal("expected a command producing refreshMsg, got nil")
+	}
+
+	results := make(chan tea.Msg, 8)
+	var run func(c tea.Cmd)
+	run = func(c tea.Cmd) {
+		if c == nil {
+			return
+		}
+		go func() {
+			msg := c()
+			if batch, ok := msg.(tea.BatchMsg); ok {
+				for _, inner := range batch {
+					run(inner)
+				}
+				return
+			}
+			results <- msg
+		}()
+	}
+	run(cmd)
+
+	timeout := time.After(2 * time.Second)
+	for {
+		select {
+		case msg := <-results:
+			if rm, ok := msg.(refreshMsg); ok {
+				return rm
+			}
+		case <-timeout:
+			t.Fatal("timed out waiting for refreshMsg from command batch")
 		}
 	}
-	return b
 }

@@ -309,12 +309,13 @@ func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) 
 
 func parseDisplayFlags(args []string) (tui.DisplayPrefs, bool, error) {
 	prefs := tui.DisplayPrefs{}
+	if v := os.Getenv("LLM_QUOTA_ICONS"); v == "1" || v == "true" {
+		prefs.Icons = true
+	}
 	for _, arg := range args {
 		switch {
 		case arg == "-h" || arg == "--help":
 			return prefs, true, nil
-		case arg == "--solid-bars":
-			prefs.BarStyle = tui.BarSolid
 		case arg == "--only=claude":
 			prefs.Visibility = tui.VisibilityClaudeOnly
 		case arg == "--only=codex":
@@ -323,6 +324,8 @@ func parseDisplayFlags(args []string) (tui.DisplayPrefs, bool, error) {
 			return prefs, false, fmt.Errorf("invalid --only value: %s (use --only=claude or --only=codex)", arg)
 		case arg == "--no-trend":
 			prefs.HideTrend = true
+		case arg == "--icons":
+			prefs.Icons = true
 		default:
 			return prefs, false, fmt.Errorf("unknown flag: %s", arg)
 		}
@@ -340,15 +343,15 @@ Usage:
   llm-quota version
 
 Flags:
-  --solid-bars    Use solid (█) progress bars instead of segmented (▌)
   --only=claude   Show only Claude rows
   --only=codex    Show only Codex rows
   --no-trend      Hide the per-row sparkline and pace forecast line
+  --icons         Use Nerd Font icons (also: LLM_QUOTA_ICONS=1; toggle live with i)
   --version       Print version information and exit
   -h, --help      Show this help
 
 Runtime keys:
-  r refresh   b bar style   v cycle providers   t trend line   q quit
+  r refresh   v cycle providers   t trend line   i toggle icons   q quit
 `)
 }
 

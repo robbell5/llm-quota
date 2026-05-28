@@ -6,32 +6,6 @@ import (
 	"github.com/robbell5/llm-quota/internal/sources"
 )
 
-// BarStyle selects how progress bars are filled.
-type BarStyle int
-
-const (
-	BarSegmented BarStyle = iota // half-block '▌' fill (default)
-	BarSolid                     // full-block '█' fill
-)
-
-func (s BarStyle) String() string {
-	switch s {
-	case BarSegmented:
-		return "BarSegmented"
-	case BarSolid:
-		return "BarSolid"
-	default:
-		return fmt.Sprintf("BarStyle(%d)", int(s))
-	}
-}
-
-func (s BarStyle) toggled() BarStyle {
-	if s == BarSolid {
-		return BarSegmented
-	}
-	return BarSolid
-}
-
 // Visibility selects which providers' rows are shown. The "hide both" state is
 // unrepresentable by construction.
 type Visibility int
@@ -78,11 +52,11 @@ func (v Visibility) shows(product sources.Product) bool {
 }
 
 // DisplayPrefs holds user display preferences. The zero value is the default
-// view: segmented bars, both providers visible, trend line shown.
+// view: both providers visible, trend line shown, no Nerd Font icons.
 type DisplayPrefs struct {
-	BarStyle   BarStyle
 	Visibility Visibility
 	HideTrend  bool
+	Icons      bool // Nerd Font icon mode (default false = safe Unicode)
 }
 
 func (p DisplayPrefs) trendVisible() bool {

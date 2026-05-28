@@ -548,20 +548,18 @@ func TestParseDisplayFlags(t *testing.T) {
 	cases := []struct {
 		name     string
 		args     []string
-		wantBar  tui.BarStyle
 		wantVis  tui.Visibility
 		wantHelp bool
 		wantErr  bool
 	}{
-		{"defaults", nil, tui.BarSegmented, tui.VisibilityBoth, false, false},
-		{"solid", []string{"--solid-bars"}, tui.BarSolid, tui.VisibilityBoth, false, false},
-		{"claude only", []string{"--only=claude"}, tui.BarSegmented, tui.VisibilityClaudeOnly, false, false},
-		{"codex only", []string{"--only=codex"}, tui.BarSegmented, tui.VisibilityCodexOnly, false, false},
-		{"combined", []string{"--solid-bars", "--only=codex"}, tui.BarSolid, tui.VisibilityCodexOnly, false, false},
-		{"help", []string{"--help"}, tui.BarSegmented, tui.VisibilityBoth, true, false},
-		{"short help", []string{"-h"}, tui.BarSegmented, tui.VisibilityBoth, true, false},
-		{"bad only value", []string{"--only=both"}, tui.BarSegmented, tui.VisibilityBoth, false, true},
-		{"unknown flag", []string{"--nope"}, tui.BarSegmented, tui.VisibilityBoth, false, true},
+		{"defaults", nil, tui.VisibilityBoth, false, false},
+		{"claude only", []string{"--only=claude"}, tui.VisibilityClaudeOnly, false, false},
+		{"codex only", []string{"--only=codex"}, tui.VisibilityCodexOnly, false, false},
+		{"help", []string{"--help"}, tui.VisibilityBoth, true, false},
+		{"short help", []string{"-h"}, tui.VisibilityBoth, true, false},
+		{"bad only value", []string{"--only=both"}, tui.VisibilityBoth, false, true},
+		{"removed solid-bars flag is unknown", []string{"--solid-bars"}, tui.VisibilityBoth, false, true},
+		{"unknown flag", []string{"--nope"}, tui.VisibilityBoth, false, true},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -575,8 +573,8 @@ func TestParseDisplayFlags(t *testing.T) {
 			if help != c.wantHelp {
 				t.Fatalf("help = %v, want %v", help, c.wantHelp)
 			}
-			if prefs.BarStyle != c.wantBar || prefs.Visibility != c.wantVis {
-				t.Fatalf("prefs = %#v, want bar=%v vis=%v", prefs, c.wantBar, c.wantVis)
+			if prefs.Visibility != c.wantVis {
+				t.Fatalf("prefs = %#v, want vis=%v", prefs, c.wantVis)
 			}
 		})
 	}
@@ -624,6 +622,38 @@ func TestParseDisplayFlagsNoTrend(t *testing.T) {
 	}
 	if !prefs.HideTrend {
 		t.Fatalf("--no-trend should set HideTrend")
+	}
+}
+
+func TestParseDisplayFlagsIcons(t *testing.T) {
+	t.Setenv("LLM_QUOTA_ICONS", "")
+	prefs, _, err := parseDisplayFlags([]string{"--icons"})
+	if err != nil || !prefs.Icons {
+		t.Fatalf("--icons should enable icons: %+v err=%v", prefs, err)
+	}
+}
+
+func TestParseDisplayFlagsIconsEnvDefault(t *testing.T) {
+	t.Setenv("LLM_QUOTA_ICONS", "1")
+	prefs, _, err := parseDisplayFlags(nil)
+	if err != nil || !prefs.Icons {
+		t.Fatalf("LLM_QUOTA_ICONS=1 should default icons on: %+v err=%v", prefs, err)
+	}
+}
+
+func TestParseDisplayFlagsIconsEnvOffByDefault(t *testing.T) {
+	t.Setenv("LLM_QUOTA_ICONS", "")
+	prefs, _, err := parseDisplayFlags(nil)
+	if err != nil || prefs.Icons {
+		t.Fatalf("no flag/env should leave icons off: %+v err=%v", prefs, err)
+	}
+}
+
+func TestParseDisplayFlagsIconsEnvTrue(t *testing.T) {
+	t.Setenv("LLM_QUOTA_ICONS", "true")
+	prefs, _, err := parseDisplayFlags(nil)
+	if err != nil || !prefs.Icons {
+		t.Fatalf("LLM_QUOTA_ICONS=true should enable icons: %+v err=%v", prefs, err)
 	}
 }
 
@@ -683,6 +713,15 @@ func TestRunVersionRejectsExtraArgs(t *testing.T) {
 				t.Fatalf("stdout = %q, want empty", stdout.String())
 			}
 		})
+	}
+}
+
+func TestHelpMentionsIcons(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	run([]string{"--help"}, appStreams{Stdin: strings.NewReader(""), Stdout: &stdout, Stderr: &stderr}, appDeps{})
+	usage := stdout.String()
+	if !strings.Contains(usage, "--icons") || !strings.Contains(usage, "LLM_QUOTA_ICONS") {
+		t.Fatalf("help should document --icons and LLM_QUOTA_ICONS:\n%s", usage)
 	}
 }
 

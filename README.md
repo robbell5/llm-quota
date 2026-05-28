@@ -9,7 +9,7 @@
 - Codex 5-hour usage
 - Codex 7-day usage
 
-Each available row shows percent used, a colored progress bar, and the reset countdown. Missing rows stay visible so the pane remains useful while local data is being produced.
+Each available row shows percent used, a color-gradient progress bar (green → amber → red), and the reset countdown. Missing rows stay visible so the pane remains useful while local data is being produced.
 
 Each row also shows a recent burn rate, a forecast (projected fill at reset, or time-to-100% when a window is on pace to exhaust early), and a sparkline of usage within the current window. A window projected to hit 100% before it resets is flagged with a ⚠ and red forecast text.
 
@@ -109,7 +109,7 @@ llm-quota
 
 For the local build path, run `./llm-quota` from the repository root instead.
 
-The display is designed for a small pane around 50 columns and degrades for narrower panes. It refreshes quota data every 30 seconds while it remains in the foreground.
+The display is designed for a small pane around 50 columns and degrades for narrower panes; it expands to a richer grouped layout with a banded title bar and wall clock when the pane is wider. It refreshes quota data every 30 seconds while it remains in the foreground.
 
 Codex quota data comes from local Codex session rollout data under:
 
@@ -122,6 +122,9 @@ Open Codex locally when Codex rows need fresh data.
 ## Keys
 
 - `r` refreshes immediately.
+- `v` cycles the provider view (both → Claude-only → Codex-only → both).
+- `t` toggles the per-row sparkline and pace forecast line.
+- `i` toggles Nerd Font icon mode.
 - `q` quits.
 - `Ctrl-C` quits.
 
@@ -131,10 +134,12 @@ Set at launch with flags, or toggle live with keys:
 
 | Flag | Key | Effect |
 | ------ | --- | ------ |
-| `--solid-bars` | `b` | Solid `█` bars instead of segmented `▌` |
 | `--only=claude` / `--only=codex` | `v` | Show only one provider (`v` cycles both → Claude-only → Codex-only → both) |
 | `--no-trend` | `t` | Hide the per-row sparkline + pace forecast line (one-line rows) |
+| `--icons` | `i` | Use Nerd Font icons (requires a Nerd Font terminal; default is safe Unicode) |
 | `--help` / `-h` | — | Show usage and exit |
+
+`--icons` can also be enabled at startup with the environment variable `LLM_QUOTA_ICONS=1`.
 
 Other keys: `r` refresh, `q` quit. No setting can hide every provider.
 

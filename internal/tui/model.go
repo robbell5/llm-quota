@@ -3,11 +3,27 @@ package tui
 import (
 	"time"
 
-	"charm.land/bubbles/v2/progress"
+	"github.com/charmbracelet/harmonica"
 
 	"github.com/robbell5/llm-quota/internal/sources"
 	"github.com/robbell5/llm-quota/internal/trend"
 )
+
+const (
+	animFPS           = 15
+	highlightDuration = 900 * time.Millisecond
+	// springSettleEpsilon is the fraction-unit tolerance below which a bar is
+	// considered visually settled (≈0.1%), distinct from numerical epsilon.
+	springSettleEpsilon = 0.001
+)
+
+// barAnim is one row's spring-animated fill fraction. target is -1 until the
+// first real value so the bar animates up from empty on first data.
+type barAnim struct {
+	pos    float64
+	vel    float64
+	target float64
+}
 
 type SourceReader interface {
 	Fetch(now time.Time) ([]sources.Window, error)
@@ -27,9 +43,14 @@ type Model struct {
 	errors              map[sources.Product]sources.SourceError
 	claudeHookInstalled bool
 
-	bars       []progress.Model
-	barTargets []float64
-	prefs      DisplayPrefs
+	bars   []barAnim
+	spring harmonica.Spring
+
+	animPhase      int
+	animRunning    bool
+	highlightUntil []time.Time
+
+	prefs DisplayPrefs
 
 	history *trend.History
 	store   *trend.Store
@@ -69,17 +90,11 @@ func NewModel(options ...Option) Model {
 		m.errors = make(map[sources.Product]sources.SourceError)
 	}
 
-	m.bars = make([]progress.Model, len(quotaRowSpecs))
-	m.barTargets = make([]float64, len(quotaRowSpecs))
+	m.spring = harmonica.NewSpring(harmonica.FPS(animFPS), 12.0, 1.0)
+	m.bars = make([]barAnim, len(quotaRowSpecs))
+	m.highlightUntil = make([]time.Time, len(quotaRowSpecs))
 	for i := range m.bars {
-		p := progress.New(progress.WithoutPercentage())
-		p.EmptyColor = mochaSurface0
-		// Spring tuning for the Phase 9 animation; harmless until SetPercent is called.
-		p.SetSpringOptions(12.0, 1.0)
-		m.bars[i] = p
-		// -1 sentinel: the first real fraction (0-1) always differs, so the bar
-		// animates from empty on first data.
-		m.barTargets[i] = -1
+		m.bars[i] = barAnim{target: -1}
 	}
 
 	if m.store != nil {

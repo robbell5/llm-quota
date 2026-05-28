@@ -2,9 +2,9 @@ package tui
 
 import (
 	"errors"
+	"math"
 	"time"
 
-	"charm.land/bubbles/v2/progress"
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/sync/errgroup"
 
@@ -42,14 +42,14 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			return m, requestRefreshCmd()
-		case "b":
-			m.prefs.BarStyle = m.prefs.BarStyle.toggled()
-			return m, nil
 		case "v":
 			m.prefs.Visibility = m.prefs.Visibility.next()
 			return m, nil
 		case "t":
 			m.prefs.HideTrend = !m.prefs.HideTrend
+			return m, nil
+		case "i":
+			m.prefs.Icons = !m.prefs.Icons
 			return m, nil
 		}
 	case tea.WindowSizeMsg:
@@ -61,23 +61,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.refreshing = true
-		return m, refreshCmd(m.claudeReader, m.codexReader, m.now)
+		return m, tea.Batch(refreshCmd(m.claudeReader, m.codexReader, m.now), m.ensureAnim())
 	case tickMsg:
 		return m, tea.Batch(requestRefreshCmd(), tickCmd(m.refreshEvery))
 	case refreshMsg:
 		m.refreshing = false
 		cmds := m.mergeRefresh(msg)
 		return m, tea.Batch(cmds...)
-	case progress.FrameMsg:
-		var cmds []tea.Cmd
+	case animTickMsg:
 		for i := range m.bars {
-			var cmd tea.Cmd
-			m.bars[i], cmd = m.bars[i].Update(msg)
-			if cmd != nil {
-				cmds = append(cmds, cmd)
+			if m.bars[i].target < 0 {
+				continue
 			}
+			m.bars[i].pos, m.bars[i].vel = m.spring.Update(m.bars[i].pos, m.bars[i].vel, m.bars[i].target)
 		}
-		return m, tea.Batch(cmds...)
+		m.animPhase++
+		if m.animating() {
+			return m, animTickCmd()
+		}
+		m.animRunning = false
+		return m, nil
 	}
 
 	return m, nil
@@ -93,6 +96,50 @@ func tickCmd(interval time.Duration) tea.Cmd {
 	return tea.Tick(interval, func(t time.Time) tea.Msg {
 		return tickMsg(t)
 	})
+}
+
+type animTickMsg time.Time
+
+func animTickCmd() tea.Cmd {
+	return tea.Tick(time.Second/animFPS, func(t time.Time) tea.Msg {
+		return animTickMsg(t)
+	})
+}
+
+// ensureAnim starts the animation loop if it is not already running.
+func (m *Model) ensureAnim() tea.Cmd {
+	if m.animRunning {
+		return nil
+	}
+	m.animRunning = true
+	return animTickCmd()
+}
+
+// animating reports whether anything still needs frames: an unsettled spring, an
+// active value-change highlight, an at-risk row (pulse), or an in-flight refresh.
+// Assumes a NewModel-constructed model (non-nil now); only reached via Update.
+func (m Model) animating() bool {
+	if m.refreshing {
+		return true
+	}
+	now := m.now()
+	for _, until := range m.highlightUntil {
+		if now.Before(until) {
+			return true
+		}
+	}
+	if m.anyAtRisk(now) {
+		return true
+	}
+	for _, b := range m.bars {
+		if b.target < 0 {
+			continue
+		}
+		if math.Abs(b.pos-b.target) > springSettleEpsilon || math.Abs(b.vel) > springSettleEpsilon {
+			return true
+		}
+	}
+	return false
 }
 
 func refreshCmd(claude SourceReader, codex SourceReader, now func() time.Time) tea.Cmd {
@@ -187,23 +234,26 @@ func (m *Model) mergeRefresh(msg refreshMsg) []tea.Cmd {
 		_ = m.store.Save(m.history)
 	}
 
-	return m.syncBarTargets()
+	m.syncBarTargets()
+	return nil
 }
 
-func (m *Model) syncBarTargets() []tea.Cmd {
-	var cmds []tea.Cmd
+// syncBarTargets assumes a NewModel-constructed model (non-nil now); only
+// reached via Update through mergeRefresh.
+func (m *Model) syncBarTargets() {
 	for i, spec := range quotaRowSpecs {
 		window, ok := findWindow(*m, spec.product, spec.kind)
 		if !ok {
 			continue
 		}
 		target := progressFraction(window.UsedPercent)
-		if target != m.barTargets[i] {
-			m.barTargets[i] = target
-			cmds = append(cmds, m.bars[i].SetPercent(target))
+		if target != m.bars[i].target {
+			if m.bars[i].target >= 0 { // not the first load
+				m.highlightUntil[i] = m.now().Add(highlightDuration)
+			}
+			m.bars[i].target = target
 		}
 	}
-	return cmds
 }
 
 func markStale(windows []sources.Window, now time.Time, staleAfter time.Duration) []sources.Window {

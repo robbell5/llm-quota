@@ -30,10 +30,13 @@ func TestRenderStartupScreen(t *testing.T) {
 		}
 	}
 	plain := ansiEscapeRE.ReplaceAllString(full, "")
-	for _, label := range []string{"5h", "7d", "Sonnet 7d"} {
+	for _, label := range []string{"5h", "7d"} {
 		if !strings.Contains(plain, label) {
 			t.Fatalf("expected short window label %q under group header, got:\n%s", label, plain)
 		}
+	}
+	if strings.Contains(plain, "Sonnet") {
+		t.Fatalf("startup screen should omit absent Sonnet data, got:\n%s", plain)
 	}
 	if strings.Contains(plain, "Claude 5h") || strings.Contains(plain, "Codex 7d") {
 		t.Fatalf("grouped layout should drop full provider-prefixed labels, got:\n%s", plain)
@@ -831,7 +834,7 @@ func lineWithRateIsDataRow(view string) bool {
 	return false
 }
 
-func TestMissingRowDimUnderGroup(t *testing.T) {
+func TestAbsentSonnetWindowDoesNotRenderPlaceholderRow(t *testing.T) {
 	now := time.Date(2026, 5, 19, 12, 0, 0, 0, time.UTC)
 	m := NewModel(WithClock(func() time.Time { return now }))
 	m.windows[sources.ProductClaude] = []sources.Window{{
@@ -839,9 +842,8 @@ func TestMissingRowDimUnderGroup(t *testing.T) {
 		UsedPercent: 20, ResetsAt: now.Add(2 * time.Hour), CapturedAt: now,
 	}}
 	full := render(withWidth(m, 100))
-	// Sonnet 7d has no window -> a missing row with its short grouped label.
-	if !strings.Contains(full, "Sonnet") {
-		t.Fatalf("expected Sonnet missing row under CLAUDE:\n%s", full)
+	if strings.Contains(full, "Sonnet") {
+		t.Fatalf("expected absent Sonnet data to omit Sonnet row:\n%s", full)
 	}
 	if !strings.Contains(full, "missing local data") {
 		t.Fatalf("expected missing-data hint:\n%s", full)

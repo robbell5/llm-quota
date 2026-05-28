@@ -58,6 +58,10 @@ func renderRows(m Model, width int) string {
 		if !m.prefs.Visibility.shows(spec.product) {
 			continue
 		}
+		window, hasWindow := findWindow(m, spec.product, spec.kind)
+		if spec.kind == sources.WindowSonnetSevenDay && !hasWindow {
+			continue
+		}
 		if grouped && spec.product != lastProduct {
 			label := "CLAUDE"
 			if spec.product == sources.ProductCodex {
@@ -72,7 +76,7 @@ func renderRows(m Model, width int) string {
 			fullLabel, shortLabel = groupedLabels(spec)
 		}
 
-		if window, ok := findWindow(m, spec.product, spec.kind); ok {
+		if hasWindow {
 			evenUse := trend.ElapsedFraction(spec.kind, window.ResetsAt, now())
 			highlighted := now().Before(m.highlightUntil[i])
 			rows = append(rows, renderDataRow(m, spec, fullLabel, shortLabel, window, m.bars[i].pos, evenUse, now(), width, highlighted))

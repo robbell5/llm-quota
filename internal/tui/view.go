@@ -42,12 +42,17 @@ func render(m Model) string {
 	if m.now != nil {
 		now = m.now
 	}
-	content := strings.Join([]string{
+	parts := []string{
 		renderTitleBand(innerWidth, now(), m.glyphs()),
 		renderRows(m, innerWidth),
-		"",
-		footerStyle.Width(innerWidth).Render(renderFooter(m, innerWidth)),
-	}, "\n")
+	}
+	if m.costActive() {
+		if line, ok := renderFreshnessLine(m, now(), innerWidth); ok {
+			parts = append(parts, line)
+		}
+	}
+	parts = append(parts, "", footerStyle.Width(innerWidth).Render(renderFooter(m, innerWidth)))
+	content := strings.Join(parts, "\n")
 
 	return shellStyle.Render(content) + "\n"
 }

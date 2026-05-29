@@ -65,3 +65,14 @@ func TestDisplayPrefsIconsDefaultOff(t *testing.T) {
 		t.Fatalf("Icons should default to false (safe glyphs)")
 	}
 }
+
+func TestCostVisibleDefaultsOn(t *testing.T) {
+	var p DisplayPrefs
+	if !p.costVisible() {
+		t.Fatalf("cost should be visible by default (zero value)")
+	}
+	p.HideCost = true
+	if p.costVisible() {
+		t.Fatalf("HideCost=true should hide cost")
+	}
+}

@@ -8,6 +8,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"golang.org/x/sync/errgroup"
 
+	"github.com/robbell5/llm-quota/internal/cost"
 	"github.com/robbell5/llm-quota/internal/sources"
 	"github.com/robbell5/llm-quota/internal/trend"
 )
@@ -19,6 +20,7 @@ type tickMsg time.Time
 type refreshMsg struct {
 	results   []sourceRefreshResult
 	fetchedAt time.Time
+	costs     map[sources.Product]map[sources.WindowKind]cost.WindowCost
 }
 
 type sourceRefreshResult struct {
@@ -48,6 +50,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case "t":
 			m.prefs.HideTrend = !m.prefs.HideTrend
 			return m, nil
+		case "c":
+			m.prefs.HideCost = !m.prefs.HideCost
+			return m, nil
 		case "i":
 			m.prefs.Icons = !m.prefs.Icons
 			return m, nil
@@ -61,7 +66,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.refreshing = true
-		return m, tea.Batch(refreshCmd(m.claudeReader, m.codexReader, m.now), m.ensureAnim())
+		return m, tea.Batch(refreshCmd(m.claudeReader, m.codexReader, m.claudeCost, m.codexCost, m.now), m.ensureAnim())
 	case tickMsg:
 		return m, tea.Batch(requestRefreshCmd(), tickCmd(m.refreshEvery))
 	case refreshMsg:
@@ -142,7 +147,7 @@ func (m Model) animating() bool {
 	return false
 }
 
-func refreshCmd(claude SourceReader, codex SourceReader, now func() time.Time) tea.Cmd {
+func refreshCmd(claude SourceReader, codex SourceReader, claudeCost CostReader, codexCost CostReader, now func() time.Time) tea.Cmd {
 	return func() tea.Msg {
 		if now == nil {
 			now = time.Now
@@ -165,8 +170,26 @@ func refreshCmd(claude SourceReader, codex SourceReader, now func() time.Time) t
 		})
 		_ = group.Wait()
 
-		return refreshMsg{results: results, fetchedAt: fetchedAt}
+		costs := computeCosts(claudeCost, codexCost, results, fetchedAt)
+		return refreshMsg{results: results, fetchedAt: fetchedAt, costs: costs}
 	}
+}
+
+// computeCosts prices each product whose fetch produced windows. A nil reader or
+// errored/empty fetch yields no entry (the renderer then hides that cluster).
+func computeCosts(claudeCost CostReader, codexCost CostReader, results []sourceRefreshResult, now time.Time) map[sources.Product]map[sources.WindowKind]cost.WindowCost {
+	out := map[sources.Product]map[sources.WindowKind]cost.WindowCost{}
+	add := func(reader CostReader, res sourceRefreshResult) {
+		if reader == nil || res.err.Category != "" || len(res.windows) == 0 {
+			return
+		}
+		if wc := reader.WindowCosts(now, res.windows); len(wc) > 0 {
+			out[res.product] = wc
+		}
+	}
+	add(claudeCost, results[0])
+	add(codexCost, results[1])
+	return out
 }
 
 func fetchSource(product sources.Product, reader SourceReader, now time.Time) sourceRefreshResult {
@@ -232,6 +255,13 @@ func (m *Model) mergeRefresh(msg refreshMsg) []tea.Cmd {
 
 	if m.store != nil {
 		_ = m.store.Save(m.history)
+	}
+
+	// msg.costs is nil only when a refreshMsg is built without cost data (e.g.
+	// test helpers or a refresh with no cost readers); skip then to preserve any
+	// previously computed costs rather than clobbering them with an empty map.
+	if msg.costs != nil {
+		m.costs = msg.costs
 	}
 
 	m.syncBarTargets()

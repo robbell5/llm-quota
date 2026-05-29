@@ -4,6 +4,21 @@
 Pushing a semver tag builds the binaries, publishes a GitHub Release, and updates
 the Homebrew formula. There is nothing to build or upload by hand.
 
+## Before tagging
+
+### Refresh the bundled pricing table
+
+`internal/cost/pricing_table.json` holds the `$/Mtok` rates used for the
+equivalent-API-value figures. Before tagging a release, reconcile it against
+current published Anthropic pricing and the LiteLLM price dataset:
+
+- update changed rates for existing models,
+- add any new Claude (`claude-*`) and Codex (`gpt-*`) models that shipped,
+- keep `estimated: true` on all Codex/GPT entries.
+
+A model missing from the table renders its value with a trailing `*`; it is
+never silently priced at $0.
+
 ## Cut a release
 
 From an up-to-date `main`, tag and push (replace `v0.1.1` with the version you

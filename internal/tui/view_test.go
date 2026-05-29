@@ -9,6 +9,7 @@ import (
 
 	"charm.land/lipgloss/v2"
 
+	"github.com/robbell5/llm-quota/internal/cost"
 	"github.com/robbell5/llm-quota/internal/sources"
 	"github.com/robbell5/llm-quota/internal/trend"
 )
@@ -1013,6 +1014,45 @@ func TestIconModeKeepsLineWidths(t *testing.T) {
 		m.windows[sources.ProductClaude] = []sources.Window{{Product: sources.ProductClaude, Kind: sources.WindowFiveHour, UsedPercent: 35, ResetsAt: now.Add(2 * time.Hour), CapturedAt: now}}
 		m.width = w
 		assertRenderedLineWidths(t, render(m), w)
+	}
+}
+
+func TestRenderConsolidatedFreshnessWhenCostActive(t *testing.T) {
+	now := time.Date(2026, 5, 29, 12, 0, 0, 0, time.Local)
+	m := NewModel(WithClock(func() time.Time { return now }), WithCosts(
+		map[sources.Product]map[sources.WindowKind]cost.WindowCost{
+			sources.ProductClaude: {sources.WindowFiveHour: {Amount: 3.2}},
+		}))
+	m.windows[sources.ProductClaude] = []sources.Window{{
+		Product: sources.ProductClaude, Kind: sources.WindowFiveHour,
+		UsedPercent: 41, CapturedAt: now.Add(-2 * time.Minute), ResetsAt: now.Add(time.Hour),
+	}}
+	m.width = 50
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if !strings.Contains(plain, "fresh: Claude") {
+		t.Fatalf("expected consolidated freshness line:\n%s", plain)
+	}
+	// Every rendered line must still fit the pane width.
+	assertRenderedLineWidths(t, render(m), 50)
+}
+
+func TestRenderNoCostLineWhenHidden(t *testing.T) {
+	now := time.Date(2026, 5, 29, 12, 0, 0, 0, time.Local)
+	m := NewModel(WithClock(func() time.Time { return now }), WithDisplayPrefs(DisplayPrefs{HideCost: true}),
+		WithCosts(map[sources.Product]map[sources.WindowKind]cost.WindowCost{
+			sources.ProductClaude: {sources.WindowFiveHour: {Amount: 3.2}},
+		}))
+	m.windows[sources.ProductClaude] = []sources.Window{{
+		Product: sources.ProductClaude, Kind: sources.WindowFiveHour,
+		UsedPercent: 41, CapturedAt: now.Add(-2 * time.Minute), ResetsAt: now.Add(time.Hour),
+	}}
+	m.width = 50
+	plain := ansiEscapeRE.ReplaceAllString(render(m), "")
+	if strings.Contains(plain, "fresh: Claude") {
+		t.Fatalf("freshness line should not appear when cost hidden")
+	}
+	if strings.Contains(plain, "$3.20") {
+		t.Fatalf("no $ should render when cost hidden")
 	}
 }
 

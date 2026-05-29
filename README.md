@@ -13,6 +13,8 @@ Each available row shows percent used, a color-gradient progress bar (green → 
 
 Each row also shows a recent burn rate, a forecast (projected fill at reset, or time-to-100% when a window is on pace to exhaust early), and a sparkline of usage within the current window. A window projected to hit 100% before it resets is flagged with a ⚠ and red forecast text.
 
+Each provider's group header also shows the **equivalent API value** of usage in its 5-hour and 7-day windows — what those tokens would have cost at pay-as-you-go API rates. This is a value/ROI figure (your flat-rate subscription has no per-token cost), not money spent. Codex values are an estimate (prefixed `~`), since ChatGPT-plan token pricing is unofficial. Toggle the values with `c` or hide them at launch with `--no-cost`.
+
 ## Install
 
 Choose one install path.
@@ -124,6 +126,7 @@ Open Codex locally when Codex rows need fresh data.
 - `r` refreshes immediately.
 - `v` cycles the provider view (both → Claude-only → Codex-only → both).
 - `t` toggles the per-row sparkline and pace forecast line.
+- `c` toggles the per-provider equivalent API-value clusters.
 - `i` toggles Nerd Font icon mode.
 - `q` quits.
 - `Ctrl-C` quits.
@@ -136,6 +139,7 @@ Set at launch with flags, or toggle live with keys:
 | ------ | --- | ------ |
 | `--only=claude` / `--only=codex` | `v` | Show only one provider (`v` cycles both → Claude-only → Codex-only → both) |
 | `--no-trend` | `t` | Hide the per-row sparkline + pace forecast line (one-line rows) |
+| `--no-cost` | `c` | Hide the per-window equivalent API-value clusters |
 | `--icons` | `i` | Use Nerd Font icons (requires a Nerd Font terminal; default is safe Unicode) |
 | `--help` / `-h` | — | Show usage and exit |
 
@@ -167,4 +171,4 @@ The TUI does not print private Claude or Codex payloads. It keeps recovery actio
 
 ## Scope
 
-v1 is a local-only foreground tmux-pane monitor. It persists a small local usage history (`~/.cache/llm-quota/history.json`) to power the in-pane pace forecast, burn rate, and trend sparkline. It does not use network or OAuth fallback, macOS Keychain reads, OS-level notifications/alerts, a daemon, multi-account support, demo mode, or fixture mode.
+v1 is a local-only foreground tmux-pane monitor. It persists a small local usage history (`~/.cache/llm-quota/history.json`) to power the in-pane pace forecast, burn rate, and trend sparkline. It does not use network or OAuth fallback, macOS Keychain reads, OS-level notifications/alerts, a daemon, multi-account support, demo mode, or fixture mode. The equivalent API-value figures are computed locally from the same transcript and rollout files the tool already reads; nothing is sent off the machine, and no new file is written.

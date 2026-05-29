@@ -11,6 +11,7 @@ import (
 	"time"
 
 	tea "charm.land/bubbletea/v2"
+	"github.com/robbell5/llm-quota/internal/cost"
 	"github.com/robbell5/llm-quota/internal/install"
 	"github.com/robbell5/llm-quota/internal/sources"
 	"github.com/robbell5/llm-quota/internal/trend"
@@ -299,8 +300,21 @@ func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) 
 	claudeReader := sources.NewClaudeReader(paths.CachePath)
 	codexReader := sources.NewCodexReader(codexSessionsRoot)
 	historyStore := trend.NewStore(filepath.Join(filepath.Dir(paths.CachePath), "history.json"))
+
+	pricing, err := cost.LoadPricing()
+	if err != nil {
+		// Embedded table failed to parse: degrade to no pricing (all values show
+		// "*"); never block startup.
+		pricing = cost.Pricing{}
+	}
+	// ClaudeConfigPath is ~/.claude/settings.json, so its dir is ~/.claude.
+	claudeProjectsRoot := filepath.Join(filepath.Dir(paths.ClaudeConfigPath), "projects")
+	claudeCost := cost.NewClaudeCostReader(claudeProjectsRoot, pricing)
+	codexCost := cost.NewCodexCostReader(codexSessionsRoot, pricing)
+
 	return tui.NewModel(
 		tui.WithReaders(claudeReader, codexReader),
+		tui.WithCostReaders(claudeCost, codexCost),
 		tui.WithClaudeHookInstalled(claudeHookInstalled),
 		tui.WithDisplayPrefs(prefs),
 		tui.WithHistoryStore(historyStore),
@@ -324,6 +338,8 @@ func parseDisplayFlags(args []string) (tui.DisplayPrefs, bool, error) {
 			return prefs, false, fmt.Errorf("invalid --only value: %s (use --only=claude or --only=codex)", arg)
 		case arg == "--no-trend":
 			prefs.HideTrend = true
+		case arg == "--no-cost":
+			prefs.HideCost = true
 		case arg == "--icons":
 			prefs.Icons = true
 		default:
@@ -346,12 +362,13 @@ Flags:
   --only=claude   Show only Claude rows
   --only=codex    Show only Codex rows
   --no-trend      Hide the per-row sparkline and pace forecast line
+  --no-cost       Hide the per-window equivalent API-value clusters
   --icons         Use Nerd Font icons (also: LLM_QUOTA_ICONS=1; toggle live with i)
   --version       Print version information and exit
   -h, --help      Show this help
 
 Runtime keys:
-  r refresh   v cycle providers   t trend line   i toggle icons   q quit
+  r refresh   v cycle providers   t trend line   c cost   i toggle icons   q quit
 `)
 }
 

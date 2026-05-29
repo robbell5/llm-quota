@@ -67,6 +67,18 @@ func renderGroupHeader(m Model, product sources.Product, label string, now time.
 	}
 	left += accent.Bold(true).Render(label)
 
+	if m.costActive() {
+		cluster, ok := valueCluster(m, product)
+		if !ok {
+			return left
+		}
+		gap := width - lipgloss.Width(left) - lipgloss.Width(cluster)
+		if gap < 1 {
+			return left // no room: label only (compact/tiny degradation)
+		}
+		return left + strings.Repeat(" ", gap) + accent.Render(cluster)
+	}
+
 	fresh, ok := groupFreshnessText(m, product, now)
 	if m.refreshing {
 		sp := spinnerFrame(m.animPhase, g)
@@ -157,7 +169,7 @@ func sourceIsStale(m Model, product sources.Product, now time.Time) bool {
 func renderFooter(m Model, innerWidth int) string {
 	hints := footerRecoveryHints(m)
 	if len(hints) == 0 {
-		full := []string{quitHint, refreshHint, "v view", "t trend", "i icons"}
+		full := []string{quitHint, refreshHint, "c cost", "v view", "t trend", "i icons"}
 		return appendHintWithinWidth("", full, innerWidth)
 	}
 

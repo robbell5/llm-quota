@@ -9,6 +9,7 @@ import (
 
 	tea "charm.land/bubbletea/v2"
 
+	"github.com/robbell5/llm-quota/internal/cost"
 	"github.com/robbell5/llm-quota/internal/sources"
 	"github.com/robbell5/llm-quota/internal/trend"
 )
@@ -572,6 +573,32 @@ func TestNewModelHasEmptyHistoryWithoutStore(t *testing.T) {
 	m := NewModel()
 	if m.history == nil {
 		t.Fatalf("history should be initialized even without a store")
+	}
+}
+
+func TestCKeyTogglesCost(t *testing.T) {
+	m := NewModel()
+	updated, _ := m.Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
+	if !updated.(Model).prefs.HideCost {
+		t.Fatalf("c should set HideCost=true")
+	}
+	again, _ := updated.(Model).Update(tea.KeyPressMsg{Code: 'c', Text: "c"})
+	if again.(Model).prefs.HideCost {
+		t.Fatalf("c should toggle HideCost back to false")
+	}
+}
+
+func TestMergeRefreshStoresCosts(t *testing.T) {
+	m := NewModel()
+	msg := refreshMsg{
+		fetchedAt: time.Unix(1_780_000_000, 0),
+		costs: map[sources.Product]map[sources.WindowKind]cost.WindowCost{
+			sources.ProductClaude: {sources.WindowFiveHour: {Amount: 3.2}},
+		},
+	}
+	m.mergeRefresh(msg)
+	if m.costs[sources.ProductClaude][sources.WindowFiveHour].Amount != 3.2 {
+		t.Fatalf("mergeRefresh did not store costs")
 	}
 }
 

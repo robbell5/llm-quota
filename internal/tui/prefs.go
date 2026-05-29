@@ -52,13 +52,18 @@ func (v Visibility) shows(product sources.Product) bool {
 }
 
 // DisplayPrefs holds user display preferences. The zero value is the default
-// view: both providers visible, trend line shown, no Nerd Font icons.
+// view: both providers visible, trend line shown, cost shown, no Nerd Font icons.
 type DisplayPrefs struct {
 	Visibility Visibility
 	HideTrend  bool
+	HideCost   bool
 	Icons      bool // Nerd Font icon mode (default false = safe Unicode)
 }
 
 func (p DisplayPrefs) trendVisible() bool {
 	return !p.HideTrend
+}
+
+func (p DisplayPrefs) costVisible() bool {
+	return !p.HideCost
 }

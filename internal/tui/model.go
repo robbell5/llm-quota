@@ -5,6 +5,7 @@ import (
 
 	"github.com/charmbracelet/harmonica"
 
+	"github.com/robbell5/llm-quota/internal/cost"
 	"github.com/robbell5/llm-quota/internal/sources"
 	"github.com/robbell5/llm-quota/internal/trend"
 )
@@ -29,12 +30,19 @@ type SourceReader interface {
 	Fetch(now time.Time) ([]sources.Window, error)
 }
 
+type CostReader interface {
+	WindowCosts(now time.Time, windows []sources.Window) map[sources.WindowKind]cost.WindowCost
+}
+
 type Model struct {
 	width  int
 	height int
 
 	claudeReader        SourceReader
 	codexReader         SourceReader
+	claudeCost          CostReader
+	codexCost           CostReader
+	costs               map[sources.Product]map[sources.WindowKind]cost.WindowCost
 	now                 func() time.Time
 	refreshEvery        time.Duration
 	staleAfter          time.Duration
@@ -114,6 +122,21 @@ func WithReaders(claude SourceReader, codex SourceReader) Option {
 	}
 }
 
+func WithCostReaders(claude CostReader, codex CostReader) Option {
+	return func(m *Model) {
+		m.claudeCost = claude
+		m.codexCost = codex
+	}
+}
+
+// WithCosts injects a precomputed costs map (used by tests to render without
+// touching the filesystem).
+func WithCosts(costs map[sources.Product]map[sources.WindowKind]cost.WindowCost) Option {
+	return func(m *Model) {
+		m.costs = costs
+	}
+}
+
 func WithClock(now func() time.Time) Option {
 	return func(m *Model) {
 		m.now = now
@@ -142,4 +165,18 @@ func WithHistoryStore(store *trend.Store) Option {
 	return func(m *Model) {
 		m.store = store
 	}
+}
+
+// costActive reports whether the value clusters and consolidated freshness line
+// should render: cost must be visible AND there must be at least one value.
+func (m Model) costActive() bool {
+	if !m.prefs.costVisible() {
+		return false
+	}
+	for _, byKind := range m.costs {
+		if len(byKind) > 0 {
+			return true
+		}
+	}
+	return false
 }

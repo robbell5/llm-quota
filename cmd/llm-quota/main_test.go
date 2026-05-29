@@ -725,6 +725,26 @@ func TestHelpMentionsIcons(t *testing.T) {
 	}
 }
 
+func TestParseDisplayFlagsNoCost(t *testing.T) {
+	prefs, showHelp, err := parseDisplayFlags([]string{"--no-cost"})
+	if err != nil || showHelp {
+		t.Fatalf("unexpected: err=%v showHelp=%v", err, showHelp)
+	}
+	if !prefs.HideCost {
+		t.Fatalf("--no-cost should set HideCost")
+	}
+}
+
+func TestParseDisplayFlagsCostDefaultsOn(t *testing.T) {
+	prefs, _, err := parseDisplayFlags(nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prefs.HideCost {
+		t.Fatalf("cost should default on (HideCost=false)")
+	}
+}
+
 func assertEvents(t *testing.T, got, want []string) {
 	t.Helper()
 	if strings.Join(got, ",") != strings.Join(want, ",") {

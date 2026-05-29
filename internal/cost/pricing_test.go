@@ -20,8 +20,8 @@ func TestLoadPricingHasSeededModels(t *testing.T) {
 	if _, ok := p.models["claude-opus-4-8"]; !ok {
 		t.Fatalf("expected claude-opus-4-8 in table")
 	}
-	if len(p.models) != 8 {
-		t.Fatalf("expected 8 seeded models, got %d", len(p.models))
+	if len(p.models) != 10 {
+		t.Fatalf("expected 10 seeded models, got %d", len(p.models))
 	}
 }
 

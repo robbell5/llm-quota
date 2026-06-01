@@ -83,7 +83,7 @@ func run(args []string, streams appStreams, deps appDeps) int {
 		}
 	}
 
-	prefs, showHelp, err := parseDisplayFlags(args)
+	prefs, codexLive, showHelp, err := parseLaunchFlags(args)
 	if err != nil {
 		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
 		return 2
@@ -97,7 +97,7 @@ func run(args []string, streams appStreams, deps appDeps) int {
 		return code
 	}
 
-	model, err := sourceBackedModel(deps, prefs)
+	model, err := sourceBackedModel(deps, prefs, codexLive)
 	if err != nil {
 		fmt.Fprintf(streams.Stderr, "llm-quota: %v\n", err)
 		return 1
@@ -283,7 +283,7 @@ func (deps appDeps) withDefaults() appDeps {
 	return deps
 }
 
-func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) {
+func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs, codexLive bool) (tui.Model, error) {
 	paths, err := deps.Paths()
 	if err != nil {
 		return tui.Model{}, err
@@ -298,7 +298,13 @@ func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) 
 	}
 
 	claudeReader := sources.NewClaudeReader(paths.CachePath)
-	codexReader := sources.NewCodexReader(codexSessionsRoot)
+	var codexReader tui.SourceReader = sources.NewCodexReader(codexSessionsRoot)
+	if codexLive {
+		codexReader = sources.FirstAvailableReader{
+			Primary:  sources.NewCodexAccountReader(),
+			Fallback: codexReader,
+		}
+	}
 	historyStore := trend.NewStore(filepath.Join(filepath.Dir(paths.CachePath), "history.json"))
 
 	pricing, err := cost.LoadPricing()
@@ -322,31 +328,39 @@ func sourceBackedModel(deps appDeps, prefs tui.DisplayPrefs) (tui.Model, error) 
 }
 
 func parseDisplayFlags(args []string) (tui.DisplayPrefs, bool, error) {
+	prefs, _, showHelp, err := parseLaunchFlags(args)
+	return prefs, showHelp, err
+}
+
+func parseLaunchFlags(args []string) (tui.DisplayPrefs, bool, bool, error) {
 	prefs := tui.DisplayPrefs{}
+	codexLive := false
 	if v := os.Getenv("LLM_QUOTA_ICONS"); v == "1" || v == "true" {
 		prefs.Icons = true
 	}
 	for _, arg := range args {
 		switch {
 		case arg == "-h" || arg == "--help":
-			return prefs, true, nil
+			return prefs, codexLive, true, nil
 		case arg == "--only=claude":
 			prefs.Visibility = tui.VisibilityClaudeOnly
 		case arg == "--only=codex":
 			prefs.Visibility = tui.VisibilityCodexOnly
 		case strings.HasPrefix(arg, "--only="):
-			return prefs, false, fmt.Errorf("invalid --only value: %s (use --only=claude or --only=codex)", arg)
+			return prefs, codexLive, false, fmt.Errorf("invalid --only value: %s (use --only=claude or --only=codex)", arg)
 		case arg == "--no-trend":
 			prefs.HideTrend = true
 		case arg == "--no-cost":
 			prefs.HideCost = true
 		case arg == "--icons":
 			prefs.Icons = true
+		case arg == "--codex-live":
+			codexLive = true
 		default:
-			return prefs, false, fmt.Errorf("unknown flag: %s", arg)
+			return prefs, codexLive, false, fmt.Errorf("unknown flag: %s", arg)
 		}
 	}
-	return prefs, false, nil
+	return prefs, codexLive, false, nil
 }
 
 func printUsage(w io.Writer) {
@@ -364,6 +378,7 @@ Flags:
   --no-trend      Hide the per-row sparkline and pace forecast line
   --no-cost       Hide the per-window equivalent API-value clusters
   --icons         Use Nerd Font icons (also: LLM_QUOTA_ICONS=1; toggle live with i)
+  --codex-live   Poll live Codex quota via app-server; costs remain rollout-based
   --version       Print version information and exit
   -h, --help      Show this help
 

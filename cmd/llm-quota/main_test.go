@@ -544,6 +544,56 @@ func TestRunNoArgStartupConstructsSourceBackedModelWithoutStartingRealTUI(t *tes
 	}
 }
 
+func TestRunCodexLiveWrapsRolloutReader(t *testing.T) {
+	tempDir := t.TempDir()
+	configPath := filepath.Join(tempDir, ".claude", "settings.json")
+	statePath := filepath.Join(tempDir, ".cache", "llm-quota", "state.json")
+	cachePath := filepath.Join(tempDir, ".cache", "llm-quota", "claude.json")
+	codexSessions := filepath.Join(tempDir, ".codex", "sessions")
+
+	var stdout, stderr bytes.Buffer
+	var captured tui.Model
+
+	code := run([]string{"--codex-live"}, appStreams{
+		Stdin:  strings.NewReader(""),
+		Stdout: &stdout,
+		Stderr: &stderr,
+	}, appDeps{
+		Paths: func() (install.ClaudeHookPaths, error) {
+			return install.ClaudeHookPaths{
+				ClaudeConfigPath: configPath,
+				StatePath:        statePath,
+				CachePath:        cachePath,
+				ExecutablePath:   filepath.Join(tempDir, "llm-quota"),
+			}, nil
+		},
+		CodexSessionsRoot: func() (string, error) {
+			return codexSessions, nil
+		},
+		ClaudeHookInstalled: func(paths install.ClaudeHookPaths) (bool, error) {
+			return true, nil
+		},
+		StartTUI: func(model tui.Model) error {
+			captured = model
+			return nil
+		},
+	})
+
+	if code != 0 {
+		t.Fatalf("exit code = %d, want 0; stdout=%q stderr=%q", code, stdout.String(), stderr.String())
+	}
+	modelDebug := fmt.Sprintf("%#v", captured)
+	if !strings.Contains(modelDebug, "sources.FirstAvailableReader") {
+		t.Fatalf("--codex-live should use FirstAvailableReader, got %s", modelDebug)
+	}
+	if !strings.Contains(modelDebug, "sources.CodexAccountReader") {
+		t.Fatalf("--codex-live should include CodexAccountReader, got %s", modelDebug)
+	}
+	if !strings.Contains(modelDebug, codexSessions) {
+		t.Fatalf("--codex-live should preserve rollout fallback path %q, got %s", codexSessions, modelDebug)
+	}
+}
+
 func TestParseDisplayFlags(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -577,6 +627,19 @@ func TestParseDisplayFlags(t *testing.T) {
 				t.Fatalf("prefs = %#v, want vis=%v", prefs, c.wantVis)
 			}
 		})
+	}
+}
+
+func TestParseLaunchFlagsCodexLive(t *testing.T) {
+	prefs, codexLive, showHelp, err := parseLaunchFlags([]string{"--codex-live"})
+	if err != nil || showHelp {
+		t.Fatalf("unexpected err=%v showHelp=%v", err, showHelp)
+	}
+	if !codexLive {
+		t.Fatalf("--codex-live should enable live Codex account polling")
+	}
+	if prefs.Visibility != tui.VisibilityBoth {
+		t.Fatalf("--codex-live should not change visibility: %+v", prefs)
 	}
 }
 
@@ -712,7 +775,16 @@ func TestRunVersionRejectsExtraArgs(t *testing.T) {
 			if stdout.Len() != 0 {
 				t.Fatalf("stdout = %q, want empty", stdout.String())
 			}
+
 		})
+	}
+}
+
+func TestHelpMentionsCodexLive(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	run([]string{"--help"}, appStreams{Stdin: strings.NewReader(""), Stdout: &stdout, Stderr: &stderr}, appDeps{})
+	if !strings.Contains(stdout.String(), "--codex-live") {
+		t.Fatalf("help should document --codex-live:\n%s", stdout.String())
 	}
 }
 

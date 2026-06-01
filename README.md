@@ -119,7 +119,7 @@ Codex quota data comes from local Codex session rollout data under:
 ~/.codex/sessions
 ```
 
-Open Codex locally when Codex rows need fresh data.
+Open Codex locally when Codex rows need fresh rollout data. If you want the Codex rows to match the Codex app's live account view, launch with `--codex-live`; this opt-in path asks `codex app-server` for `account/rateLimits/read` on refresh and falls back to local rollouts if the live call is unavailable. `--codex-live` updates quota percentages and reset times only; Codex equivalent API-value estimates remain based on local rollout token usage.
 
 ## Keys
 
@@ -141,6 +141,7 @@ Set at launch with flags, or toggle live with keys:
 | `--no-trend` | `t` | Hide the per-row sparkline + pace forecast line (one-line rows) |
 | `--no-cost` | `c` | Hide the per-window equivalent API-value clusters |
 | `--icons` | `i` | Use Nerd Font icons (requires a Nerd Font terminal; default is safe Unicode) |
+| `--codex-live` | — | Poll live Codex quota via app-server; cost estimates remain rollout-based |
 | `--help` / `-h` | — | Show usage and exit |
 
 `--icons` can also be enabled at startup with the environment variable `LLM_QUOTA_ICONS=1`.
@@ -165,10 +166,12 @@ If the footer shows `Claude: open Claude`, open Claude locally so it can produce
 
 If the footer shows `Codex: open Codex`, open Codex locally so rollout data appears under `~/.codex/sessions`.
 
+If the Codex app shows fresher percentages than `llm-quota`, run `llm-quota --codex-live` to opt in to the same app-server rate-limit source. Without that flag, `llm-quota` stays local-only and shows the newest rollout snapshot. The live source does not include model/token details, so Codex equivalent API-value estimates may still lag until local rollout files include the matching token usage.
+
 If the footer says data is old, such as `Claude data 2h old; open Claude` or `Codex data 1d old; open Codex`, the TUI is keeping last-known local data on screen. Open the named tool and press `r`, or wait for the next 30-second refresh, to pick up newer local data.
 
 The TUI does not print private Claude or Codex payloads. It keeps recovery actions focused on the same user-facing hints shown in the footer.
 
 ## Scope
 
-v1 is a local-only foreground tmux-pane monitor. It persists a small local usage history (`~/.cache/llm-quota/history.json`) to power the in-pane pace forecast, burn rate, and trend sparkline. It does not use network or OAuth fallback, macOS Keychain reads, OS-level notifications/alerts, a daemon, multi-account support, demo mode, or fixture mode. The equivalent API-value figures are computed locally from the same transcript and rollout files the tool already reads; nothing is sent off the machine, and no new file is written.
+v1 defaults to a local-only foreground tmux-pane monitor. It persists a small local usage history (`~/.cache/llm-quota/history.json`) to power the in-pane pace forecast, burn rate, and trend sparkline. By default it does not use network or OAuth fallback, macOS Keychain reads, OS-level notifications/alerts, a daemon, multi-account support, demo mode, or fixture mode. The optional `--codex-live` flag uses the local `codex app-server` command to ask the Codex account endpoint for live rate-limit percentages and falls back to local rollout files when unavailable; use it only when matching the Codex app's live account view matters more than the default local-only steady state. The equivalent API-value figures are computed locally from the same transcript and rollout files the tool already reads.

@@ -31,6 +31,11 @@ type Usage struct {
 	CacheRead    int64
 }
 
+// isZero reports whether no tokens were recorded in any pricing class.
+func (u Usage) isZero() bool {
+	return u.Input == 0 && u.Output == 0 && u.CacheWrite5m == 0 && u.CacheWrite1h == 0 && u.CacheRead == 0
+}
+
 // Pricing is an exact-match model → Rates lookup loaded from the embedded table.
 type Pricing struct {
 	models map[string]Rates

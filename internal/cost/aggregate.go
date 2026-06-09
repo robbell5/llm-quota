@@ -25,6 +25,9 @@ func aggregate(entries []entry, windowStart, now time.Time, p Pricing) WindowCos
 		if e.ts.Before(windowStart) || e.ts.After(now) {
 			continue
 		}
+		if e.usage.isZero() {
+			continue // zero-usage entries (e.g. <synthetic> error records) can't affect cost
+		}
 		amount, known, estimated := p.price(e.model, e.usage)
 		if !known {
 			wc.Incomplete = true

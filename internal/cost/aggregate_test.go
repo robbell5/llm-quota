@@ -72,6 +72,21 @@ func TestAggregateUnknownOnlyWindow(t *testing.T) {
 	}
 }
 
+func TestAggregateSkipsZeroUsageEntries(t *testing.T) {
+	p, _ := LoadPricing()
+	start := ts("2026-05-28T10:00:00Z")
+	now := ts("2026-05-28T15:00:00Z")
+	entries := []entry{
+		{ts: ts("2026-05-28T11:00:00Z"), model: "claude-opus-4-8", usage: Usage{Output: 1_000_000}},
+		{ts: ts("2026-05-28T12:00:00Z"), model: "<synthetic>", usage: Usage{}}, // zero usage: must be ignored
+	}
+	wc := aggregate(entries, start, now, p)
+	approx(t, wc.Amount, 25.0)
+	if wc.Incomplete {
+		t.Fatalf("zero-usage unknown-model entry must not flag incomplete, got %+v", wc)
+	}
+}
+
 func TestDedupKeepsFirstByID(t *testing.T) {
 	in := []entry{
 		{id: "req-1", model: "a", usage: Usage{Output: 10}},

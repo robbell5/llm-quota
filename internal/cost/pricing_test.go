@@ -17,11 +17,13 @@ func TestLoadPricingHasSeededModels(t *testing.T) {
 	if err != nil {
 		t.Fatalf("LoadPricing: %v", err)
 	}
-	if _, ok := p.models["claude-opus-4-8"]; !ok {
-		t.Fatalf("expected claude-opus-4-8 in table")
+	for _, model := range []string{"claude-opus-4-8", "claude-fable-5", "claude-haiku-4-5-20251001"} {
+		if _, ok := p.models[model]; !ok {
+			t.Fatalf("expected %s in table", model)
+		}
 	}
-	if len(p.models) != 11 {
-		t.Fatalf("expected 11 seeded models, got %d", len(p.models))
+	if len(p.models) != 13 {
+		t.Fatalf("expected 13 seeded models, got %d", len(p.models))
 	}
 }
 
@@ -36,6 +38,37 @@ func TestPriceClaudeFirm(t *testing.T) {
 		t.Fatalf("claude should not be estimated")
 	}
 	approx(t, amount, 30.0)
+}
+
+func TestPriceFable(t *testing.T) {
+	p, _ := LoadPricing()
+	// 1M input + 1M output for fable = $10 + $50 = $60.
+	amount, known, estimated := p.price("claude-fable-5", Usage{Input: 1_000_000, Output: 1_000_000})
+	if !known {
+		t.Fatalf("expected known model")
+	}
+	if estimated {
+		t.Fatalf("claude should not be estimated")
+	}
+	approx(t, amount, 60.0)
+	// A 1M-context-suffixed fable id must price like the base id.
+	suffixed, known, _ := p.price("claude-fable-5[1m]", Usage{Input: 1_000_000, Output: 1_000_000})
+	if !known {
+		t.Fatalf("expected suffixed fable id to resolve to base rates")
+	}
+	approx(t, suffixed, amount)
+}
+
+func TestPriceDatedHaikuMatchesAlias(t *testing.T) {
+	p, _ := LoadPricing()
+	// The dated full id is the same model as the claude-haiku-4-5 alias.
+	dated, known, _ := p.price("claude-haiku-4-5-20251001", Usage{Input: 1_000_000, Output: 1_000_000})
+	if !known {
+		t.Fatalf("expected dated haiku id to be priced")
+	}
+	alias, _, _ := p.price("claude-haiku-4-5", Usage{Input: 1_000_000, Output: 1_000_000})
+	approx(t, dated, alias)
+	approx(t, dated, 6.0) // $1 + $5
 }
 
 func TestPriceCacheTokens(t *testing.T) {

@@ -1,4 +1,5 @@
 /llm-quota
+/.worktrees/
 /docs/superpowers/*
 !/docs/superpowers/specs/
 /docs/superpowers/specs/*

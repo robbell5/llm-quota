@@ -61,6 +61,21 @@ func TestAggregateMarksEstimatedForCodex(t *testing.T) {
 	}
 }
 
+func TestAggregatePricesSonnet5EntriesByTimestamp(t *testing.T) {
+	p, _ := LoadPricing()
+	start := ts("2026-08-30T00:00:00Z")
+	now := ts("2026-09-02T00:00:00Z")
+	entries := []entry{
+		{ts: ts("2026-08-31T23:59:59Z"), model: "claude-sonnet-5", usage: Usage{Input: 1_000_000, Output: 1_000_000}},
+		{ts: ts("2026-09-01T00:00:00Z"), model: "claude-sonnet-5", usage: Usage{Input: 1_000_000, Output: 1_000_000}},
+	}
+	wc := aggregate(entries, start, now, p)
+	approx(t, wc.Amount, 30.0) // $12 intro entry + $18 standard entry.
+	if wc.Estimated || wc.Incomplete {
+		t.Fatalf("unexpected flags: %+v", wc)
+	}
+}
+
 func TestAggregateUnknownOnlyWindow(t *testing.T) {
 	p, _ := LoadPricing()
 	start := ts("2026-05-28T10:00:00Z")
